@@ -24,8 +24,10 @@
       })();
     </script>
 
-    <!-- (DIPERBAIKI) Menambahkan ../ untuk naik satu level -->
-    <a href="../index.html" class="back-link">← Menu Utama</a>
+    <!-- (DIPERBAIKI) Tombol "Menu Utama" diganti menjadi tombol ikon -->
+    <a href="../index.html" class="nav-btn-svg" id="back-to-menu-btn" title="Kembali ke Menu">
+        <img src="../img/left.svg" alt="Menu Utama">
+    </a>
 
     <div class="theme-switch-wrapper">
         <label class="theme-switch" for="checkbox">
@@ -62,11 +64,14 @@
             </div>
             <div class="card-counter" id="card-counter">0 / 0</div>
 
-            <!-- Kontrol Mode Bebas (Tombol Auto-play ditambahkan) -->
+            <!-- (DIPERBARUI) Kontrol Mode Bebas (Tombol Audio ditambahkan) -->
             <div class="button-bar controls-bebas">
                 <div id="prev-button-svg" class="nav-btn-svg"><img src="../img/left.svg" alt="Sebelumnya"></div>
                 <div id="shuffle-button-bebas" class="shuffle-btn"><img src="../img/acak.svg" alt="Acak Kartu"></div>
-                <!-- (BARU DITAMBAHKAN) Tombol Auto-Play -->
+                <!-- (BARU DITAMBAHKAN) Tombol Toggle Audio -->
+                <div id="toggle-audio-btn" class="nav-btn-svg" title="Aktifkan/Nonaktifkan Suara">
+                    <img src="../img/audio.svg" alt="Audio">
+                </div>
                 <div id="auto-play-button" class="nav-btn-svg"><img src="../img/otomatis.svg" alt="Otomatis"></div>
                 <div id="next-button-svg" class="nav-btn-svg"><img src="../img/right.svg" alt="Selanjutnya"></div>
             </div>

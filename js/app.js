@@ -10,6 +10,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   const storageKey = `flashcardProgress_bab${babId}_mode${learningMode}`;
+  // (BARU) Kunci localStorage untuk status audio
+  const audioEnabledKey = `flashcardAudioEnabled_bab${babId}`;
 
   function loadDataScript(callback) {
     const script = document.createElement("script");
@@ -43,8 +45,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const prevButtonSVG = document.getElementById("prev-button-svg");
     const nextButtonSVG = document.getElementById("next-button-svg");
     const shuffleButtonBebas = document.getElementById("shuffle-button-bebas");
+    // (BARU) Ambil elemen tombol audio
+    const toggleAudioButton = document.getElementById("toggle-audio-btn");
 
-    // REVISI: Ambil tombol 'prev' dari mode test juga
     const prevButtonTestSVG = document.getElementById("prev-button-svg-test");
     const correctButtonSVG = document.getElementById("correct-button-svg");
     const wrongButtonSVG = document.getElementById("wrong-button-svg");
@@ -60,10 +63,50 @@ document.addEventListener("DOMContentLoaded", () => {
     let wrongPile = [];
     let currentCardIndex = 0;
     let sessionProgress = 1;
-    let correctAnswers = 0; // REVISI: Ini sekarang melacak total jawaban benar per putaran
-    let totalCardCount = 0; // REVISI: Untuk melacak total kartu di awal sesi test
+    let correctAnswers = 0;
+    let totalCardCount = 0;
     let isFlipped = false;
     let isShuffled = false;
+    // (BARU) Variabel status audio, ambil dari localStorage atau default ke false (nonaktif)
+    let isAudioEnabled =
+      localStorage.getItem(audioEnabledKey) === "true" || false;
+
+    // (BARU) Inisialisasi Speech Synthesis
+    const synth = window.speechSynthesis;
+    let voices = [];
+
+    function populateVoiceList() {
+      if (typeof synth === "undefined") {
+        console.warn("Speech Synthesis tidak didukung browser ini.");
+        return;
+      }
+      // Dapatkan suara, filter yang Bahasa Jepang
+      voices = synth.getVoices().filter((voice) => voice.lang.startsWith("ja"));
+
+      if (voices.length === 0) {
+        console.warn(
+          "Tidak ditemukan suara (voice) Bahasa Jepang di browser ini."
+        );
+        // Nonaktifkan tombol jika tidak ada suara Jepang
+        if (toggleAudioButton) {
+          toggleAudioButton.style.opacity = "0.5";
+          toggleAudioButton.style.pointerEvents = "none";
+          isAudioEnabled = false; // Pastikan nonaktif
+          localStorage.setItem(audioEnabledKey, "false");
+        }
+      } else {
+        // Pastikan status tombol sesuai saat load
+        if (toggleAudioButton) {
+          toggleAudioButton.classList.toggle("active", isAudioEnabled);
+        }
+      }
+    }
+    // Panggil sekali di awal
+    populateVoiceList();
+    // Panggil lagi jika daftar suara berubah (beberapa browser memuatnya secara async)
+    if (speechSynthesis.onvoiceschanged !== undefined) {
+      speechSynthesis.onvoiceschanged = populateVoiceList;
+    }
 
     if (typeof dataString === "undefined" || dataString.trim() === "") {
       cardFront.textContent = "Data kosong atau tidak valid.";
@@ -87,12 +130,12 @@ document.addEventListener("DOMContentLoaded", () => {
           definition = definition.substring(1, definition.length - 1);
         }
         const back = `<div class="hiragana">${hiragana}</div><div class="definition">${definition}</div><div class="level">${level}</div>`;
-        originalFlashcards.push({ front, back, answered: null }); // REVISI: Tambah status 'answered'
+        originalFlashcards.push({ front, back, answered: null });
       } catch (e) {
         console.error("Gagal mem-parsing baris:", line, e);
       }
     }
-    totalCardCount = originalFlashcards.length; // Simpan total kartu
+    totalCardCount = originalFlashcards.length;
 
     // Fungsi Modal Kustom
     function showModal(text, yesCallback, noCallback) {
@@ -191,17 +234,41 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    // REVISI: showCard tidak lagi membalik kartu
+    // (DIPERBAIKI) Fungsi speakText sekarang cek status isAudioEnabled
+    function speakText(text) {
+      // (BARU) Cek apakah audio diaktifkan
+      if (!isAudioEnabled) return;
+
+      // Hentikan ucapan sebelumnya jika ada
+      synth.cancel();
+
+      if (text && synth && voices.length > 0) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.voice = voices[0]; // Gunakan suara Jepang pertama yang ditemukan
+        utterance.lang = "ja-JP";
+        synth.speak(utterance);
+      } else if (!synth) {
+        console.warn("Speech Synthesis tidak aktif.");
+      } else if (voices.length === 0) {
+        console.warn("Tidak ada suara Jepang, tidak bisa membacakan.");
+      }
+    }
+
+    // REVISI: showCard sekarang memanggil speakText
     function showCard(index) {
       if (!currentFlashcards || currentFlashcards.length === 0) return;
       currentCardIndex =
         (index + currentFlashcards.length) % currentFlashcards.length;
       const newCardData = currentFlashcards[currentCardIndex];
       if (!newCardData) return;
-      cardFront.textContent = newCardData.front;
+
+      const textToDisplay = newCardData.front;
+      cardFront.textContent = textToDisplay;
       cardBack.innerHTML = newCardData.back;
       updateCounter();
-      // Logika flip dihapus dari sini
+
+      // (BARU) Panggil fungsi speak setelah teks diatur
+      speakText(textToDisplay);
     }
 
     function toggleShuffle() {
@@ -210,31 +277,47 @@ document.addEventListener("DOMContentLoaded", () => {
       shuffleButtonTest.classList.toggle("active", isShuffled);
       if (isShuffled) {
         shuffleArray(currentFlashcards);
+        // Setelah diacak, reset ke kartu pertama
+        transitionToCard(0);
       }
-      saveProgress();
+      saveProgress(); // Simpan status shuffle
     }
 
     function flipCard() {
       if (currentFlashcards.length > 0) {
         isFlipped = !isFlipped;
         card.classList.toggle("is-flipped");
+
+        // (OPSIONAL) Jika ingin membacakan Hiragana saat dibalik:
+        /*
+        if (isFlipped) {
+           const hiraganaElement = cardBack.querySelector('.hiragana');
+           if (hiraganaElement) {
+               speakText(hiraganaElement.textContent);
+           }
+        } else {
+           // Jika dibalik ke depan, baca lagi Kanjinya
+           speakText(cardFront.textContent);
+        }
+        */
       }
     }
 
     // REVISI: (PERBAIKAN BUG VISUAL)
-    // Logika flip dipindah ke sini. Kartu akan dibalik ke depan DULU,
-    // baru ganti konten.
     function transitionToCard(newIndex) {
       if (appContainer.classList.contains("is-changing")) return;
 
       const flipFirst = isFlipped; // Cek apakah kartu sedang terbalik
+
+      // (BARU) Hentikan ucapan yang sedang berjalan sebelum ganti kartu
+      if (isAudioEnabled) synth.cancel();
 
       // Fungsi untuk ganti konten kartu
       const changeCardContent = () => {
         appContainer.classList.add("is-changing");
         try {
           setTimeout(() => {
-            showCard(newIndex); // Panggil showCard yang sudah bersih
+            showCard(newIndex); // Panggil showCard (yang akan memanggil speakText)
           }, 150);
         } catch (e) {
           console.error("Error saat transisi kartu:", e);
@@ -259,7 +342,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // --- Logika Navigasi BARU ---
 
-    // REVISI: Logika 'prevCard' sekarang berfungsi di kedua mode
     function prevCard() {
       if (currentCardIndex > 0) {
         if (learningMode === "bebas" && sessionProgress > 1) {
@@ -343,19 +425,20 @@ document.addEventListener("DOMContentLoaded", () => {
     function handleWrong() {
       if (learningMode !== "test" || currentFlashcards.length === 0) return;
 
-      const card = currentFlashcards[currentCardIndex];
+      const cardData = currentFlashcards[currentCardIndex]; // Gunakan variabel lokal
 
       // Tandai kartu sebagai 'salah'
-      card.answered = "wrong";
+      cardData.answered = "wrong";
 
       // Pastikan kartu hanya ada SATU kali di wrongPile
-      if (!wrongPile.find((c) => c.front === card.front)) {
-        wrongPile.push(card);
+      if (!wrongPile.find((c) => c.front === cardData.front)) {
+        wrongPile.push({ ...cardData }); // Salin objek kartu ke wrongPile
       }
 
       // Jika sebelumnya dijawab benar, kurangi counter
-      if (card.answered === "correct") {
-        correctAnswers--;
+      // (Ini sepertinya tidak mungkin terjadi karena kartu hanya dijawab sekali per putaran)
+      if (currentFlashcards[currentCardIndex].answered === "correct") {
+        correctAnswers--; // Ini mungkin perlu dihapus jika logika di atas benar
       }
 
       saveProgress();
@@ -371,6 +454,23 @@ document.addEventListener("DOMContentLoaded", () => {
     function handleThemeToggle() {
       const isDarkMode = document.body.classList.toggle("dark-mode");
       localStorage.setItem("theme", isDarkMode ? "dark" : "light");
+    }
+
+    // (BARU) Fungsi untuk toggle audio
+    function toggleAudio() {
+      isAudioEnabled = !isAudioEnabled; // Balikkan status
+      if (toggleAudioButton)
+        toggleAudioButton.classList.toggle("active", isAudioEnabled); // Update tampilan tombol
+      localStorage.setItem(audioEnabledKey, isAudioEnabled ? "true" : "false"); // Simpan ke localStorage
+
+      // Jika audio dinonaktifkan, hentikan suara yang sedang berjalan
+      if (!isAudioEnabled) {
+        synth.cancel();
+      }
+      // Jika diaktifkan, baca kartu saat ini
+      else {
+        speakText(cardFront.textContent);
+      }
     }
 
     // Event Listeners
@@ -400,6 +500,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if (nextButtonSVG) nextButtonSVG.addEventListener("click", nextCard);
     if (shuffleButtonBebas)
       shuffleButtonBebas.addEventListener("click", toggleShuffle);
+    // (BARU) Tambahkan event listener untuk tombol audio
+    if (toggleAudioButton) {
+      toggleAudioButton.addEventListener("click", toggleAudio);
+    }
 
     // Mode Test
     if (prevButtonTestSVG)
@@ -424,7 +528,10 @@ document.addEventListener("DOMContentLoaded", () => {
           shuffleArray(currentFlashcards);
         }
       }
+      // Panggil populateVoiceList lagi setelah inisialisasi awal, untuk jaga-jaga
+      populateVoiceList();
       updateCounter();
+      // Tampilkan kartu pertama, speakText akan otomatis cek isAudioEnabled
       showCard(currentCardIndex);
     });
   }

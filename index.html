@@ -9,7 +9,7 @@
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,200;1,300;1,400;1,500;1,600;1,700;1,800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@100..900&family=Spectral:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,200;1,300;1,400;1,500;1,600;1,700;1,800&display=swap" rel="stylesheet">
 </head>
 <body class="menu-page">
 
@@ -23,7 +23,6 @@
       })();
     </script>
 
-    <!-- (BARU) Theme toggle dipindah ke sini agar konsisten -->
     <div class="theme-switch-wrapper">
         <label class="theme-switch" for="checkbox">
             <input type="checkbox" id="checkbox" />
@@ -32,12 +31,12 @@
     </div>
 
     <div class="menu-container">
-        <!-- (BARU) Logo header -->
+        <!-- (BARU DITAMBAHKAN) Watermark Logo -->
         <img src="img/logo.svg" class="watermark-logo-menu" alt="Logo Watermark">
         <br><br>
         <p class="subtitle">Pilih level dan bab untuk memulai latihan.</p>
         
-        <!-- (BARU) Layout Kategori Accordion (Menggantikan Dropdown) -->
+        <!-- (BARU) Layout Kategori Accordion -->
         <div class="category-list">
             
             <!-- Kategori N5 -->
@@ -47,9 +46,12 @@
                     <span class="icon">+</span>
                 </button>
                 <div class="category-content">
-                    <div class="chapter-link-grid">
-                        <a data-bab="1" class="chapter-link">Bab 1</a>
-                        <a data-bab="2" class="chapter-link">Bab 2</a>
+                    <!-- (DIPERBAIKI) Wrapper untuk padding -->
+                    <div class="category-content-inner">
+                        <div class="chapter-link-grid">
+                            <a data-bab="1" class="chapter-link">Bab 1</a>
+                            <a data-bab="2" class="chapter-link">Bab 2</a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -61,9 +63,12 @@
                     <span class="icon">+</span>
                 </button>
                 <div class="category-content">
-                    <div class="chapter-link-grid">
-                        <a data-bab="3" class="chapter-link">Bab 1</a>
-                        <a data-bab="4" class="chapter-link">Bab 2</a>
+                    <!-- (DIPERBAIKI) Wrapper untuk padding -->
+                    <div class="category-content-inner">
+                        <div class="chapter-link-grid">
+                            <a data-bab="3" class="chapter-link">Bab 1</a>
+                            <a data-bab="4" class="chapter-link">Bab 2</a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -75,13 +80,16 @@
                     <span class="icon">+</span>
                 </button>
                 <div class="category-content">
-                    <div class="chapter-link-grid">
-                        <a data-bab="5" class="chapter-link">Bab 1</a>
-                        <a data-bab="6" class="chapter-link">Bab 2</a>
-                        <a data-bab="7" class="chapter-link">Bab 3</a>
-                        <a data-bab="8" class="chapter-link">Bab 4</a>
-                        <a data-bab="9" class="chapter-link">Bab 5</a>
-                        <a data-bab="10" class="chapter-link">Bab 6</a>
+                    <!-- (DIPERBAIKI) Wrapper untuk padding -->
+                    <div class="category-content-inner">
+                        <div class="chapter-link-grid">
+                            <a data-bab="5" class="chapter-link">Bab 1</a>
+                            <a data-bab="6" class="chapter-link">Bab 2</a>
+                            <a data-bab="7" class="chapter-link">Bab 3</a>
+                            <a data-bab="8" class="chapter-link">Bab 4</a>
+                            <a data-bab="9" class="chapter-link">Bab 5</a>
+                            <a data-bab="10" class="chapter-link">Bab 6</a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -93,13 +101,16 @@
                     <span class="icon">+</span>
                 </button>
                 <div class="category-content">
-                    <div class="chapter-link-grid">
-                        <a data-bab="11" class="chapter-link">Bab 1</a>
-                        <a data-bab="12" class="chapter-link">Bab 2</a>
-                        <a data-bab="13" class="chapter-link">Bab 3</a>
-                        <a data-bab="14" class="chapter-link">Bab 4</a>
-                        <a data-bab="15" class="chapter-link">Bab 5</a>
-                        <a data-bab="16" class="chapter-link">Bab 6</a>
+                    <!-- (DIPERBAIKI) Wrapper untuk padding -->
+                    <div class="category-content-inner">
+                        <div class="chapter-link-grid">
+                            <a data-bab="11" class="chapter-link">Bab 1</a>
+                            <a data-bab="12" class="chapter-link">Bab 2</a>
+                            <a data-bab="13" class="chapter-link">Bab 3</a>
+                            <a data-bab="14" class="chapter-link">Bab 4</a>
+                            <a data-bab="15" class="chapter-link">Bab 5</a>
+                            <a data-bab="16" class="chapter-link">Bab 6</a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -111,15 +122,18 @@
                     <span class="icon">+</span>
                 </button>
                 <div class="category-content">
-                    <div class="chapter-link-grid">
-                        <a data-bab="17" class="chapter-link">Bab 1</a>
-                        <a data-bab="18" class="chapter-link">Bab 2</a>
-                        <a data-bab="19" class="chapter-link">Bab 3</a>
-                        <a data-bab="20" class="chapter-link">Bab 4</a>
-                        <a data-bab="21" class="chapter-link">Bab 5</a>
-                        <a data-bab="22" class="chapter-link">Bab 6</a>
-                        <a data-bab="23" class="chapter-link">Bab 7</a>
-                        <a data-bab="24" class="chapter-link">Bab 8</a>
+                    <!-- (DIPERBAIKI) Wrapper untuk padding -->
+                    <div class="category-content-inner">
+                        <div class="chapter-link-grid">
+                            <a data-bab="17" class="chapter-link">Bab 1</a>
+                            <a data-bab="18" class="chapter-link">Bab 2</a>
+                            <a data-bab="19" class="chapter-link">Bab 3</a>
+                            <a data-bab="20" class="chapter-link">Bab 4</a>
+                            <a data-bab="21" class="chapter-link">Bab 5</a>
+                            <a data-bab="22" class="chapter-link">Bab 6</a>
+                            <a data-bab="23" class="chapter-link">Bab 7</a>
+                            <a data-bab="24" class="chapter-link">Bab 8</a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -151,37 +165,44 @@
                 localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
             });
 
-            // --- (BARU) Logika Accordion ---
+            // --- (DIPERBAIKI) Logika Accordion ---
             const allCategoryItems = document.querySelectorAll('.category-item');
             const allCategoryHeaders = document.querySelectorAll('.category-header');
-            const allCategoryContents = document.querySelectorAll('.category-content');
 
             allCategoryHeaders.forEach(header => {
                 header.addEventListener('click', () => {
                     const item = header.parentElement;
-                    const content = header.nextElementSibling;
+                    const content = item.querySelector('.category-content');
                     const isOpen = item.classList.contains('active');
 
                     // Tutup semua item
                     allCategoryItems.forEach(i => {
                         i.classList.remove('active');
                         i.querySelector('.icon').textContent = '+';
-                    });
-                    allCategoryContents.forEach(c => {
-                        c.style.maxHeight = '0';
-                        c.style.padding = '0 1.5rem';
+                        i.querySelector('.category-content').style.maxHeight = '0px';
                     });
 
                     // Buka item yang diklik (jika tadinya tertutup)
                     if (!isOpen) {
                         item.classList.add('active');
                         header.querySelector('.icon').textContent = '−';
-                        // Set maxHeight ke scrollHeight agar transisi mulus
+                        // (DIPERBAIKI) Atur maxHeight ke 'scrollHeight' agar transisi mulus
                         content.style.maxHeight = content.scrollHeight + 'px';
-                        content.style.padding = null; // Biarkan padding default dari grid
                     }
                 });
             });
+
+            // (DIPERBAIKI) Sesuaikan maxHeight jika ukuran window berubah (misal: rotasi HP)
+             window.addEventListener('resize', () => {
+                const activeItem = document.querySelector('.category-item.active');
+                if (activeItem) {
+                    const content = activeItem.querySelector('.category-content');
+                    // (DIPERBAIKI) Hitung ulang scrollHeight saat resize
+                    content.style.maxHeight = 'none'; // Hapus dulu agar bisa hitung ulang
+                    content.style.maxHeight = content.scrollHeight + 'px';
+                }
+             });
+
 
             // --- Logika Modal (Disesuaikan) ---
             const modal = document.getElementById('mode-modal');

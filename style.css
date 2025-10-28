@@ -141,18 +141,28 @@ body.menu-page {
 .category-content {
     max-height: 0;
     overflow: hidden;
-    transition: max-height 0.4s ease-in-out, padding 0.3s ease;
-    padding: 0 1.5rem;
+    transition: max-height 0.4s ease-in-out;
+    padding: 0; /* (DIPERBAIKI) Padding dipindahkan ke inner wrapper */
 }
+
+/* (DIPERBAIKI) Hapus padding dari 'active' state */
+.category-item.active .category-content {
+    /* Tidak perlu padding di sini */
+}
+
+/* (BARU) Wrapper untuk padding agar transisi mulus */
+.category-content-inner {
+    padding: 1.5rem 1.5rem; /* Padding proporsional di sini */
+}
+
 
 .chapter-link-grid {
     display: grid;
     /* (DIPERBAIKI) Mengganti 'auto-fill' menjadi '3' agar konsisten */
     grid-template-columns: repeat(3, 1fr);
     gap: 0.75rem;
-    /* (DIPERBAIKI) Menyamakan padding atas dan bawah agar proporsional */
-    padding-top: 1.5rem; 
-    padding-bottom: 1.5rem; 
+    /* (DIPERBAIKI) Menambahkan justify-items untuk mencegah 'melar' */
+    justify-items: center;
 }
 
 .chapter-link {
@@ -166,6 +176,9 @@ body.menu-page {
     border-radius: 8px;
     border: 1px solid var(--border-color);
     transition: all 0.2s ease;
+    /* (DIPERBAIKI) Tentukan lebar agar konsisten */
+    width: 100%; /* Tombol akan mengisi sel, tapi selnya diatur oleh grid */
+    max-width: 140px; /* Batas maksimum agar tidak terlalu lebar */
 }
 .chapter-link:hover {
     background-color: var(--color-brand);
@@ -211,22 +224,13 @@ body.dark-mode .watermark-logo-menu {
     transition: padding-bottom 0.3s ease; /* (BARU) Transisi saat padding berubah */
 }
 
-.back-link { 
+/* (DIPERBAIKI) Mengganti .back-link dengan #back-to-menu-btn */
+#back-to-menu-btn { 
     position: absolute; 
     top: 25px; 
     left: 25px; 
-    font-size: 1.1rem; 
-    font-weight: 700; 
-    color: var(--text-subtle-color); 
-    text-decoration: none; 
     z-index: 20; 
-    background: var(--bg-color); 
-    padding: 8px 12px; 
-    border-radius: 8px; 
-    transition: all 0.3s ease; 
-}
-.back-link:hover {
-    color: var(--color-brand);
+    /* Style ukuran (width/height/padding) diambil dari .nav-btn-svg */
 }
 
 .theme-switch-wrapper { 
@@ -651,7 +655,8 @@ body.mode-test .controls-test {
     .card__face--front { font-size: 3.5rem; }
     .card__face--back .hiragana { font-size: 1.8rem; }
     .card__face--back .definition { font-size: 1.3rem; }
-    .back-link { top: 15px; left: 15px; }
+    /* (DIPERBAIKI) Atur posisi tombol kembali #back-to-menu-btn */
+    #back-to-menu-btn { top: 15px; left: 15px; }
     .theme-switch-wrapper { top: 15px; right: 15px; }
 
     /* (BARU) Layout tombol test di mobile */
