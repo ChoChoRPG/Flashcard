@@ -150,10 +150,11 @@ body.menu-page {
     padding: 0; /* (DIPERBAIKI) Padding dipindahkan ke inner wrapper */
 }
 
-/* (DIPERBAIKI) Hapus padding dari 'active' state */
+/* (DIPERBAIKI) Ruleset kosong DIHAPUS */
+/*
 .category-item.active .category-content {
-    /* Tidak perlu padding di sini */
 }
+*/
 
 /* (BARU) Wrapper untuk padding agar transisi mulus */
 .category-content-inner {
