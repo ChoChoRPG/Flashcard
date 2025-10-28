@@ -2,14 +2,13 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>𒁍Kotoba Flashcard</title>
-    <link rel="stylesheet" href="../style.css"> 
+    <link rel="stylesheet" href="../style.css">
     <link rel="icon" href="../img/logo.svg" type="image/svg+xml">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,200;1,300;1,400;1,500;1,600;1,700;1,800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
 
@@ -32,10 +31,11 @@
         <img src="../img/moon.svg" alt="Dark Mode" class="icon-moon">
     </button>
 
+
     <div id="app" class="app-container">
         <div class="card-scene-wrapper">
              <img src="../img/logo.svg" class="watermark-logo" alt="Logo Watermark">
-            
+
             <div class="card-scene">
                 <div class="card" id="flashcard">
                     <div class="card__face card__face--front" id="card-front">Memuat Data...</div>
@@ -58,13 +58,12 @@
             <div class="button-bar controls-bebas">
                 <div id="prev-button-svg" class="nav-btn-svg"><img src="../img/left.svg" alt="Sebelumnya"></div>
                 <div id="shuffle-button-bebas" class="shuffle-btn"><img src="../img/acak.svg" alt="Acak Kartu"></div>
-                
                 <div id="auto-play-button" class="nav-btn-svg"><img src="../img/otomatis.svg" alt="Otomatis"></div>
                 <div id="next-button-svg" class="nav-btn-svg"><img src="../img/right.svg" alt="Selanjutnya"></div>
             </div>
-            
+
             <div class="button-bar controls-test">
-                <div id="prev-button-svg-test" class="nav-btn-svg"><img src="../img/left.svg" alt="Sebelumnya"></div> 
+                <div id="prev-button-svg-test" class="nav-btn-svg"><img src="../img/left.svg" alt="Sebelumnya"></div>
                 <button id="btn-action-wrong" class="btn-action">
                     <img src="../img/silang.svg" alt=""> Salah
                 </button>
@@ -89,11 +88,33 @@
         </div>
     </div>
 
+     <div class="contact-fab-container">
+        <button class="contact-fab" id="contact-fab-btn" title="Kontak">
+             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-message-square"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+        </button>
+        <div class="contact-menu" id="contact-menu">
+            <div class="contact-section">
+                <p class="contact-description">Jika menemukan jawaban tidak sesuai, masalah, bug, dan pertanyaan bisa contact dibawah ini:</p>
+                <div class="contact-icons">
+                    <a href="https://wa.me/6289602907872?text=Halo%2C%20saya%20ingin%20bertanya%20lebih%20lanjut." target="_blank" title="WhatsApp"><img src="img/wa.svg" alt="WhatsApp"></a>
+                    <a href="mailto:chochorpg.g@gmail.com" target="_blank" title="Email"><img src="img/email.svg" alt="Email"></a>
+                    <a href="https://discord.com/users/386071452157476874" target="_blank" title="Discord"><img src="img/discord.svg" alt="Discord"></a>
+                </div>
+            </div>
+            <div class="contact-section">
+                <p class="contact-description">Jika Anda merasa konten ini bermanfaat dan ingin mendukung saya untuk terus berkarya, donasi sekecil apa pun akan sangat berarti.</p>
+                <div class="contact-icons">
+                    <a href="https://sociabuzz.com/chochorpg" target="_blank" title="Donasi"><img src="img/donate.svg" alt="Donasi"></a>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="../js/app.js"></script>
-    
+
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            
+
             const progressBar = document.getElementById('progress-bar');
             const counterElement = document.getElementById('card-counter');
 
@@ -102,20 +123,21 @@
                     mutations.forEach((mutation) => {
                         if ((mutation.type === 'childList' || mutation.type === 'characterData') && counterElement.textContent) {
                             try {
-                                const text = counterElement.textContent; 
+                                const text = counterElement.textContent;
                                 const parts = text.split('/').map(s => parseInt(s.trim()));
-                                
+
                                 if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1]) && parts[1] > 0) {
                                     const [current, total] = parts;
+
                                     let percentage = 0;
                                     const appBody = document.body;
-                                    
+
                                     if (appBody.classList.contains('mode-test')) {
                                         percentage = (current / total) * 100;
                                     } else {
                                         percentage = (current / total) * 100;
                                     }
-                                    
+
                                     if (progressBar) progressBar.style.width = `${percentage}%`;
                                 } else if (parts.length === 2 && parts[1] === 0) {
                                     if (progressBar) progressBar.style.width = '0%';
@@ -148,12 +170,12 @@
             const autoPlaySpeedSlider = document.getElementById('autoplay-speed');
             const autoPlaySpeedValue = document.getElementById('autoplay-speed-value');
             const flashcard = document.getElementById('flashcard');
-            const nextButtonSvg = document.getElementById('next-button-svg'); 
+            const nextButtonSvg = document.getElementById('next-button-svg');
 
             let isAutoPlaying = false;
             let autoPlayTimer = null;
-            let currentSpeed = 3000; 
-            let programmaticClick = false; 
+            let currentSpeed = 3000;
+            let programmaticClick = false;
 
             function updateAppPadding() {
                 if (controlsContainer && appContainer) {
@@ -161,45 +183,46 @@
                     appContainer.style.setProperty('--controls-height', `${controlsHeight + 20}px`);
                 }
             }
-            updateAppPadding(); 
+            updateAppPadding();
 
             function autoPlayStep() {
-                if (!isAutoPlaying || !flashcard || !nextButtonSvg) return; 
+                if (!isAutoPlaying || !flashcard || !nextButtonSvg) return;
 
                 if (flashcard.classList.contains('is-flipped')) {
-                    programmaticClick = true; 
-                    flashcard.click(); 
+                    programmaticClick = true;
+                    flashcard.click();
                 }
 
                 autoPlayTimer = setTimeout(() => {
-                    if (!isAutoPlaying) return; 
-                    
+                    if (!isAutoPlaying) return;
+
                     if (!flashcard.classList.contains('is-flipped')) {
-                         programmaticClick = true; 
-                         flashcard.click(); 
+                         programmaticClick = true;
+                         flashcard.click();
                     }
-                    
+
                     autoPlayTimer = setTimeout(() => {
                         if (!isAutoPlaying) return;
-                        nextButtonSvg.click(); 
+                        nextButtonSvg.click();
+
                     }, currentSpeed);
                 }, currentSpeed);
             }
 
             function startAutoPlay() {
                 isAutoPlaying = true;
-                autoPlayButton.classList.add('active');
-                autoPlayControls.style.display = 'flex';
-                updateAppPadding(); 
-                autoPlayStep(); 
+                if(autoPlayButton) autoPlayButton.classList.add('active');
+                if(autoPlayControls) autoPlayControls.style.display = 'flex';
+                updateAppPadding();
+                autoPlayStep();
             }
 
             function stopAutoPlay() {
                 isAutoPlaying = false;
-                autoPlayButton.classList.remove('active');
-                autoPlayControls.style.display = 'none';
-                updateAppPadding(); 
-                clearTimeout(autoPlayTimer); 
+                if(autoPlayButton) autoPlayButton.classList.remove('active');
+                if(autoPlayControls) autoPlayControls.style.display = 'none';
+                updateAppPadding();
+                clearTimeout(autoPlayTimer);
             }
 
             if (autoPlayButton) {
@@ -219,7 +242,7 @@
                     const speedInSeconds = parseInt(autoPlaySpeedSlider.value);
                     currentSpeed = speedInSeconds * 1000;
                     autoPlaySpeedValue.textContent = speedInSeconds;
-                    
+
                     if (isAutoPlaying) {
                         clearTimeout(autoPlayTimer);
                         autoPlayStep();
@@ -230,16 +253,16 @@
              if (flashcard) {
                 flashcard.addEventListener('click', () => {
                     if (programmaticClick) {
-                        programmaticClick = false; 
+                        programmaticClick = false;
                         return;
                     }
-                    
+
                     if(isAutoPlaying) {
                         stopAutoPlay();
                     }
                 });
              }
-             
+
              const prevButtonSvg = document.getElementById('prev-button-svg');
              if (prevButtonSvg) {
                  prevButtonSvg.addEventListener('click', stopAutoPlay);
@@ -253,7 +276,7 @@
                  nextButtonSvg.addEventListener('click', () => {
                      if(isAutoPlaying) {
                          clearTimeout(autoPlayTimer);
-                         autoPlayStep(); 
+                         autoPlayStep();
                      }
                  });
              }
@@ -262,6 +285,22 @@
                 updateAppPadding();
              });
              if(controlsContainer) resizeObserver.observe(controlsContainer);
+
+             const contactFab = document.getElementById('contact-fab-btn');
+             const contactMenu = document.getElementById('contact-menu');
+
+             if(contactFab && contactMenu) {
+                 contactFab.addEventListener('click', (e) => {
+                     e.stopPropagation();
+                     contactMenu.classList.toggle('show-menu');
+                 });
+
+                 document.addEventListener('click', (e) => {
+                     if (contactMenu.classList.contains('show-menu') && !contactMenu.contains(e.target) && e.target !== contactFab) {
+                         contactMenu.classList.remove('show-menu');
+                     }
+                 });
+             }
 
         });
     </script>
