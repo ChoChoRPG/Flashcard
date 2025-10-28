@@ -3,12 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- (BARU) Mencegah 'loncatan' layout di mobile -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>𒁍Flashcard</title>
-    <link rel="icon" href="../img/logos.svg" type="image/svg+xml">
-    <!-- (DIPERBAIKI) Menambahkan ../ untuk naik satu level -->
+    <title>𒁍Kotoba Flashcard</title>
     <link rel="stylesheet" href="../style.css"> 
+    <link rel="icon" href="../img/logo.svg" type="image/svg+xml">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,200;1,300;1,400;1,500;1,600;1,700;1,800&display=swap" rel="stylesheet">
@@ -25,22 +23,17 @@
       })();
     </script>
 
-    <!-- (DIPERBAIKI) Tombol "Menu Utama" diganti menjadi tombol ikon -->
     <a href="../index.html" class="nav-btn-svg" id="back-to-menu-btn" title="Kembali ke Menu">
         <img src="../img/left.svg" alt="Menu Utama">
     </a>
 
-    <div class="theme-switch-wrapper">
-        <label class="theme-switch" for="checkbox">
-            <input type="checkbox" id="checkbox" />
-            <div class="slider round"></div>
-        </label>
-    </div>
+    <button class="theme-toggle-btn" id="theme-toggle-btn" title="Ganti Tema">
+        <img src="../img/sun.svg" alt="Light Mode" class="icon-sun">
+        <img src="../img/moon.svg" alt="Dark Mode" class="icon-moon">
+    </button>
 
     <div id="app" class="app-container">
-        <!-- (BARU) Wrapper untuk flex-grow -->
         <div class="card-scene-wrapper">
-             <!-- (DIPERBAIKI) Logo.svg ditambahkan kembali -->
              <img src="../img/logo.svg" class="watermark-logo" alt="Logo Watermark">
             
             <div class="card-scene">
@@ -51,31 +44,25 @@
             </div>
         </div>
 
-        <!-- (BARU) Kontrol sekarang fixed di bawah -->
         <div class="controls-container" id="controls-container">
-            <!-- (BARU DITAMBAHKAN) Kontrol Kecepatan Auto-Play -->
             <div class="autoplay-controls" id="autoplay-controls" style="display: none;">
                 <label for="autoplay-speed">Kecepatan: <span id="autoplay-speed-value">3</span> detik</label>
                 <input type="range" id="autoplay-speed" min="1" max="10" value="3" class="speed-slider">
             </div>
 
-            <!-- Progress Bar -->
             <div class="progress-bar-container">
                 <div class="progress-bar" id="progress-bar"></div>
             </div>
             <div class="card-counter" id="card-counter">0 / 0</div>
 
-            <!-- (DIPERBARUI) Kontrol Mode Bebas (Tombol Audio DIHAPUS) -->
             <div class="button-bar controls-bebas">
                 <div id="prev-button-svg" class="nav-btn-svg"><img src="../img/left.svg" alt="Sebelumnya"></div>
                 <div id="shuffle-button-bebas" class="shuffle-btn"><img src="../img/acak.svg" alt="Acak Kartu"></div>
-                <!-- (DIHAPUS) Tombol Toggle Audio -->
-                <!-- <div id="toggle-audio-btn" ...> ... </div> -->
+                
                 <div id="auto-play-button" class="nav-btn-svg"><img src="../img/otomatis.svg" alt="Otomatis"></div>
                 <div id="next-button-svg" class="nav-btn-svg"><img src="../img/right.svg" alt="Selanjutnya"></div>
             </div>
             
-            <!-- Kontrol Mode Test (Urutan sudah diperbaiki) -->
             <div class="button-bar controls-test">
                 <div id="prev-button-svg-test" class="nav-btn-svg"><img src="../img/left.svg" alt="Sebelumnya"></div> 
                 <button id="btn-action-wrong" class="btn-action">
@@ -86,14 +73,12 @@
                 </button>
                 <div id="shuffle-button-test" class="shuffle-btn"><img src="../img/acak.svg" alt="Acak Kartu"></div>
 
-                <!-- Tombol asli (disembunyikan oleh CSS) untuk app.js -->
                 <div id="wrong-button-svg" class="nav-btn-svg"><img src="../img/silang.svg" alt="Salah"></div>
                 <div id="correct-button-svg" class="nav-btn-svg"><img src="../img/ceklis.svg" alt="Benar"></div>
             </div>
         </div>
     </div>
 
-    <!-- Modal Kustom (Tidak berubah) -->
     <div id="custom-modal" class="modal-overlay" style="display: none;">
         <div class="modal-content">
             <p id="modal-text" style="font-size: 1.2rem; margin-bottom: 2rem;">Teks modal default</p>
@@ -104,14 +89,11 @@
         </div>
     </div>
 
-    <!-- (DIPERBAIKI) Menambahkan ../ untuk naik satu level -->
     <script src="../js/app.js"></script>
     
-    <!-- (BARU DITAMBAHKAN) Skrip untuk Progress Bar, Auto-Play, dan Padding Dinamis -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             
-            // --- Elemen untuk Progress Bar ---
             const progressBar = document.getElementById('progress-bar');
             const counterElement = document.getElementById('card-counter');
 
@@ -120,23 +102,15 @@
                     mutations.forEach((mutation) => {
                         if ((mutation.type === 'childList' || mutation.type === 'characterData') && counterElement.textContent) {
                             try {
-                                const text = counterElement.textContent; // Cth: "5 / 20"
+                                const text = counterElement.textContent; 
                                 const parts = text.split('/').map(s => parseInt(s.trim()));
                                 
                                 if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1]) && parts[1] > 0) {
                                     const [current, total] = parts;
-                                    // REVISI: Pastikan progres kartu 'saat ini' yang dipakai (bukan jawaban benar)
-                                    // Mode bebas: 1/20 -> 5%
-                                    // Mode test: 0/15 (kartu 1 dari 15) -> (1/15) * 100
-                                    
                                     let percentage = 0;
                                     const appBody = document.body;
                                     
                                     if (appBody.classList.contains('mode-test')) {
-                                        // Asumsi app.js menyimpan currentCardIndex. Kita tidak bisa akses itu.
-                                        // Kita pakai 'correctAnswers' sebagai gantinya, walau kurang ideal.
-                                        // Alternatif: Baca dari app.js (jika bisa)
-                                        // Untuk sekarang, kita pakai 'current' dari counter
                                         percentage = (current / total) * 100;
                                     } else {
                                         percentage = (current / total) * 100;
@@ -147,7 +121,6 @@
                                     if (progressBar) progressBar.style.width = '0%';
                                 }
                             } catch (e) {
-                                // console.error("Error parsing card counter:", e);
                                 if (progressBar) progressBar.style.width = '0%';
                             }
                         }
@@ -156,7 +129,6 @@
                 observer.observe(counterElement, { childList: true, subtree: true, characterData: true });
             }
 
-            // --- Elemen untuk Tombol Aksi (Mode Test) ---
             const btnActionWrong = document.getElementById('btn-action-wrong');
             const btnActionCorrect = document.getElementById('btn-action-correct');
             const originalWrongBtn = document.getElementById('wrong-button-svg');
@@ -169,7 +141,6 @@
                 btnActionCorrect.addEventListener('click', () => originalCorrectBtn.click());
             }
 
-            // --- (DIPERBAIKI) Logika untuk Auto-Play & Padding Dinamis ---
             const appContainer = document.getElementById('app');
             const controlsContainer = document.getElementById('controls-container');
             const autoPlayButton = document.getElementById('auto-play-button');
@@ -181,48 +152,36 @@
 
             let isAutoPlaying = false;
             let autoPlayTimer = null;
-            let currentSpeed = 3000; // Default 3 detik (dalam ms)
-            let programmaticClick = false; // (BUGFIX) Flag untuk klik terprogram
+            let currentSpeed = 3000; 
+            let programmaticClick = false; 
 
-            // (DIPERBAIKI) Fungsi untuk padding dinamis
             function updateAppPadding() {
                 if (controlsContainer && appContainer) {
                     const controlsHeight = controlsContainer.offsetHeight;
                     appContainer.style.setProperty('--controls-height', `${controlsHeight + 20}px`);
                 }
             }
-            // Panggil sekali saat memuat
             updateAppPadding(); 
 
-            // Fungsi rekursif yang aman untuk auto-play
             function autoPlayStep() {
                 if (!isAutoPlaying || !flashcard || !nextButtonSvg) return; 
 
-                // Pastikan kartu menghadap depan sebelum memulai timer
                 if (flashcard.classList.contains('is-flipped')) {
-                    programmaticClick = true; // (BUGFIX) Set flag
-                    flashcard.click(); // Balik ke depan
+                    programmaticClick = true; 
+                    flashcard.click(); 
                 }
 
-                // 1. Tampilkan DEPAN, tunggu 'currentSpeed'
                 autoPlayTimer = setTimeout(() => {
                     if (!isAutoPlaying) return; 
                     
-                    // 2. Balik ke BELAKANG, tunggu 'currentSpeed'
                     if (!flashcard.classList.contains('is-flipped')) {
-                         programmaticClick = true; // (BUGFIX) Set flag
-                         flashcard.click(); // Balik ke belakang
+                         programmaticClick = true; 
+                         flashcard.click(); 
                     }
                     
                     autoPlayTimer = setTimeout(() => {
                         if (!isAutoPlaying) return;
-
-                        // 3. Pindah ke KARTU BERIKUTNYA
-                        nextButtonSvg.click(); // Ini akan di-handle oleh listener 'nextButtonSvg'
-                        
-                        // 4. Jadwalkan langkah berikutnya (langsung dipanggil oleh listener 'nextButtonSvg')
-                        // autoPlayStep(); (Tidak perlu di sini lagi)
-
+                        nextButtonSvg.click(); 
                     }, currentSpeed);
                 }, currentSpeed);
             }
@@ -231,19 +190,18 @@
                 isAutoPlaying = true;
                 autoPlayButton.classList.add('active');
                 autoPlayControls.style.display = 'flex';
-                updateAppPadding(); // (PADDING FIX) Update padding saat slider muncul
-                autoPlayStep(); // Mulai siklus
+                updateAppPadding(); 
+                autoPlayStep(); 
             }
 
             function stopAutoPlay() {
                 isAutoPlaying = false;
                 autoPlayButton.classList.remove('active');
                 autoPlayControls.style.display = 'none';
-                updateAppPadding(); // (PADDING FIX) Update padding saat slider hilang
-                clearTimeout(autoPlayTimer); // Hentikan timer yang sedang berjalan
+                updateAppPadding(); 
+                clearTimeout(autoPlayTimer); 
             }
 
-            // Event Listener untuk tombol auto-play
             if (autoPlayButton) {
                 autoPlayButton.addEventListener('click', () => {
                     if (isAutoPlaying) {
@@ -256,7 +214,6 @@
                 });
             }
 
-            // Event Listener untuk slider kecepatan
             if (autoPlaySpeedSlider && autoPlaySpeedValue) {
                 autoPlaySpeedSlider.addEventListener('input', () => {
                     const speedInSeconds = parseInt(autoPlaySpeedSlider.value);
@@ -270,23 +227,19 @@
                 });
             }
 
-             // (BUGFIX) Event listener klik pada kartu
              if (flashcard) {
                 flashcard.addEventListener('click', () => {
                     if (programmaticClick) {
-                        // Ini adalah klik terprogram, jangan hentikan auto-play
-                        programmaticClick = false; // Reset flag
+                        programmaticClick = false; 
                         return;
                     }
                     
                     if(isAutoPlaying) {
-                        // Ini adalah klik manual, hentikan auto-play
                         stopAutoPlay();
                     }
                 });
              }
              
-             // Hentikan jika user klik prev/shuffle manual
              const prevButtonSvg = document.getElementById('prev-button-svg');
              if (prevButtonSvg) {
                  prevButtonSvg.addEventListener('click', stopAutoPlay);
@@ -296,18 +249,15 @@
                 shuffleButtonBebas.addEventListener('click', stopAutoPlay);
              }
 
-             // (BUGFIX) Tangani klik 'next' saat auto-play
              if (nextButtonSvg) {
                  nextButtonSvg.addEventListener('click', () => {
                      if(isAutoPlaying) {
-                         // Jika auto-play, jangan stop, tapi restart timernya
                          clearTimeout(autoPlayTimer);
-                         autoPlayStep(); // Jadwalkan langkah berikutnya
+                         autoPlayStep(); 
                      }
                  });
              }
 
-             // (PADDING FIX) Amati perubahan pada 'controls-container' jika ada
              const resizeObserver = new ResizeObserver(() => {
                 updateAppPadding();
              });

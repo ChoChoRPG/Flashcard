@@ -4,9 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chotoba - Menu Utama</title>
-    <link rel="icon" href="img/logos.svg" type="image/svg+xml">
-    <!-- Path ini sudah benar (karena index.html ada di root) -->
     <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="img/logo.svg" type="image/svg+xml">
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -24,30 +23,25 @@
       })();
     </script>
 
-    <div class="theme-switch-wrapper">
-        <label class="theme-switch" for="checkbox">
-            <input type="checkbox" id="checkbox" />
-            <div class="slider round"></div>
-        </label>
-    </div>
+    <button class="theme-toggle-btn" id="theme-toggle-btn" title="Ganti Tema">
+        <img src="img/sun.svg" alt="Light Mode" class="icon-sun">
+        <img src="img/moon.svg" alt="Dark Mode" class="icon-moon">
+    </button>
+
 
     <div class="menu-container">
-        <!-- (BARU DITAMBAHKAN) Watermark Logo -->
         <img src="img/logo.svg" class="watermark-logo-menu" alt="Logo Watermark">
         <br><br>
         <p class="subtitle">Pilih level dan bab untuk memulai latihan.</p>
         
-        <!-- (BARU) Layout Kategori Accordion -->
         <div class="category-list">
             
-            <!-- Kategori N5 -->
             <div class="category-item">
                 <button class="category-header">
                     <span>N5</span>
                     <span class="icon">+</span>
                 </button>
                 <div class="category-content">
-                    <!-- (DIPERBAIKI) Wrapper untuk padding -->
                     <div class="category-content-inner">
                         <div class="chapter-link-grid">
                             <a data-bab="1" class="chapter-link">Bab 1</a>
@@ -57,14 +51,12 @@
                 </div>
             </div>
             
-            <!-- Kategori N4 -->
             <div class="category-item">
                 <button class="category-header">
                     <span>N4</span>
                     <span class="icon">+</span>
                 </button>
                 <div class="category-content">
-                    <!-- (DIPERBAIKI) Wrapper untuk padding -->
                     <div class="category-content-inner">
                         <div class="chapter-link-grid">
                             <a data-bab="3" class="chapter-link">Bab 1</a>
@@ -74,14 +66,12 @@
                 </div>
             </div>
 
-            <!-- Kategori N3 -->
             <div class="category-item">
                 <button class="category-header">
                     <span>N3</span>
                     <span class="icon">+</span>
                 </button>
                 <div class="category-content">
-                    <!-- (DIPERBAIKI) Wrapper untuk padding -->
                     <div class="category-content-inner">
                         <div class="chapter-link-grid">
                             <a data-bab="5" class="chapter-link">Bab 1</a>
@@ -95,14 +85,12 @@
                 </div>
             </div>
 
-            <!-- Kategori N2 -->
             <div class="category-item">
                 <button class="category-header">
                     <span>N2</span>
                     <span class="icon">+</span>
                 </button>
                 <div class="category-content">
-                    <!-- (DIPERBAIKI) Wrapper untuk padding -->
                     <div class="category-content-inner">
                         <div class="chapter-link-grid">
                             <a data-bab="11" class="chapter-link">Bab 1</a>
@@ -116,14 +104,12 @@
                 </div>
             </div>
 
-            <!-- Kategori N1 -->
             <div class="category-item">
                 <button class="category-header">
                     <span>N1</span>
                     <span class="icon">+</span>
                 </button>
                 <div class="category-content">
-                    <!-- (DIPERBAIKI) Wrapper untuk padding -->
                     <div class="category-content-inner">
                         <div class="chapter-link-grid">
                             <a data-bab="17" class="chapter-link">Bab 1</a>
@@ -141,12 +127,10 @@
         </div>
     </div>
 
-    <!-- Modal Pemilihan Mode (Styling disesuaikan di CSS) -->
     <div id="mode-modal" class="modal-overlay" style="display: none;">
         <div class="modal-content">
             <h3>Pilih Mode Belajar</h3>
             <div class="modal-buttons">
-                <!-- (BARU) Menambahkan kelas untuk styling -->
                 <button id="mode-bebas" class="modal-button btn-primary">Belajar Bebas</button>
                 <button id="mode-test" class="modal-button btn-secondary">Test</button>
             </div>
@@ -156,17 +140,17 @@
     
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // Logika toggle tema
-            const themeToggle = document.getElementById('checkbox');
-            if (document.body.classList.contains('dark-mode')) {
-                if(themeToggle) themeToggle.checked = true;
-            }
-            if(themeToggle) themeToggle.addEventListener('change', () => {
+            const themeToggle = document.getElementById('theme-toggle-btn');
+            
+            function handleThemeToggle() {
                 const isDarkMode = document.body.classList.toggle('dark-mode');
                 localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
-            });
+            }
 
-            // --- (DIPERBAIKI) Logika Accordion ---
+            if (themeToggle) {
+                themeToggle.addEventListener('click', handleThemeToggle);
+            }
+
             const allCategoryItems = document.querySelectorAll('.category-item');
             const allCategoryHeaders = document.querySelectorAll('.category-header');
 
@@ -176,41 +160,33 @@
                     const content = item.querySelector('.category-content');
                     const isOpen = item.classList.contains('active');
 
-                    // Tutup semua item
                     allCategoryItems.forEach(i => {
                         i.classList.remove('active');
                         i.querySelector('.icon').textContent = '+';
                         i.querySelector('.category-content').style.maxHeight = '0px';
                     });
 
-                    // Buka item yang diklik (jika tadinya tertutup)
                     if (!isOpen) {
                         item.classList.add('active');
                         header.querySelector('.icon').textContent = '−';
-                        // (DIPERBAIKI) Atur maxHeight ke 'scrollHeight' agar transisi mulus
                         content.style.maxHeight = content.scrollHeight + 'px';
                     }
                 });
             });
 
-            // (DIPERBAIKI) Sesuaikan maxHeight jika ukuran window berubah (misal: rotasi HP)
              window.addEventListener('resize', () => {
                 const activeItem = document.querySelector('.category-item.active');
                 if (activeItem) {
                     const content = activeItem.querySelector('.category-content');
-                    // (DIPERBAIKI) Hitung ulang scrollHeight saat resize
-                    content.style.maxHeight = 'none'; // Hapus dulu agar bisa hitung ulang
+                    content.style.maxHeight = 'none'; 
                     content.style.maxHeight = content.scrollHeight + 'px';
                 }
              });
 
-
-            // --- Logika Modal (Disesuaikan) ---
             const modal = document.getElementById('mode-modal');
             const modalClose = document.getElementById('modal-close');
             const modeBebasBtn = document.getElementById('mode-bebas');
             const modeTestBtn = document.getElementById('mode-test');
-            // (BARU) Target link di dalam accordion
             const menuLinks = document.querySelectorAll('.chapter-link'); 
             let targetBab = '';
 
@@ -231,12 +207,10 @@
                 if (e.target === modal) closeModal();
             });
 
-            // (DIPERBAIKI) Menambahkan 'sesi/' pada path
             modeBebasBtn.addEventListener('click', () => {
                 window.location.href = `sesi/sesi.html?bab=${targetBab}&mode=bebas`;
             });
 
-            // (DIPERBAIKI) Menambahkan 'sesi/' pada path
             modeTestBtn.addEventListener('click', () => {
                 window.location.href = `sesi/sesi.html?bab=${targetBab}&mode=test`;
             });

@@ -10,8 +10,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   const storageKey = `flashcardProgress_bab${babId}_mode${learningMode}`;
-  // (DIHAPUS) Kunci audio tidak diperlukan lagi
-  // const audioEnabledKey = `flashcardAudioEnabled_bab${babId}`;
 
   function loadDataScript(callback) {
     const script = document.createElement("script");
@@ -39,14 +37,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const cardFront = document.getElementById("card-front");
     const cardBack = document.getElementById("card-back");
     const cardCounter = document.getElementById("card-counter");
-    const themeToggle = document.getElementById("checkbox");
+    const themeToggle = document.getElementById("theme-toggle-btn");
     const cardScene = document.querySelector(".card-scene");
 
     const prevButtonSVG = document.getElementById("prev-button-svg");
     const nextButtonSVG = document.getElementById("next-button-svg");
     const shuffleButtonBebas = document.getElementById("shuffle-button-bebas");
-    // (DIHAPUS) Tombol audio tidak diperlukan lagi
-    // const toggleAudioButton = document.getElementById("toggle-audio-btn");
 
     const prevButtonTestSVG = document.getElementById("prev-button-svg-test");
     const correctButtonSVG = document.getElementById("correct-button-svg");
@@ -63,14 +59,10 @@ document.addEventListener("DOMContentLoaded", () => {
     let wrongPile = [];
     let currentCardIndex = 0;
     let sessionProgress = 1;
-    let correctAnswers = 0; // (DIKEMBALIKAN) Logika test mode sebelumnya
+    let correctAnswers = 0;
     let totalCardCount = 0;
     let isFlipped = false;
     let isShuffled = false;
-
-    // (DIHAPUS) Semua variabel audio tidak diperlukan lagi
-
-    // (DIHAPUS) Fungsi inisialisasi tombol audio
 
     if (typeof dataString === "undefined" || dataString.trim() === "") {
       cardFront.textContent = "Data kosong atau tidak valid.";
@@ -99,15 +91,12 @@ document.addEventListener("DOMContentLoaded", () => {
         console.error("Gagal mem-parsing baris:", line, e);
       }
     }
-    totalCardCount = originalFlashcards.length; // (DIKEMBALIKAN) Set TCC di sini
+    totalCardCount = originalFlashcards.length;
 
-    // Fungsi Modal Kustom
     function showModal(text, yesCallback, noCallback) {
-      // (DIKEMBALIKAN) Logika modal sebelumnya
       modalText.textContent = text;
       modal.style.display = "flex";
 
-      // (DIKEMBALIKAN) Teks tombol default
       modalButtonYes.textContent = "Ya";
       modalButtonNo.textContent = "Tidak";
 
@@ -130,22 +119,20 @@ document.addEventListener("DOMContentLoaded", () => {
           { once: true }
         );
       } else {
-        // (DIKEMBALIKAN) Logika modal "Selesai"
         modalButtonYes.textContent = "Selesai";
         modalButtonNo.style.display = "none";
       }
     }
 
-    // Fungsi localStorage
     function saveProgress() {
       try {
         const progress = {
           currentFlashcards: currentFlashcards,
           wrongPile: wrongPile,
           currentCardIndex: currentCardIndex,
-          sessionProgress: sessionProgress, // Untuk mode bebas
-          correctAnswers: correctAnswers, // (DIKEMBALIKAN) Untuk mode test
-          totalCardCount: totalCardCount, // Untuk mode test
+          sessionProgress: sessionProgress,
+          correctAnswers: correctAnswers,
+          totalCardCount: totalCardCount,
           isShuffled: isShuffled,
         };
         localStorage.setItem(storageKey, JSON.stringify(progress));
@@ -164,13 +151,12 @@ document.addEventListener("DOMContentLoaded", () => {
         showModal(
           "Ditemukan sesi terakhir yang belum selesai. Lanjutkan?",
           () => {
-            // YES
             const progress = JSON.parse(savedData);
             currentFlashcards = progress.currentFlashcards;
             wrongPile = progress.wrongPile;
             currentCardIndex = progress.currentCardIndex;
             sessionProgress = progress.sessionProgress;
-            correctAnswers = progress.correctAnswers; // (DIKEMBALIKAN)
+            correctAnswers = progress.correctAnswers;
             totalCardCount =
               progress.totalCardCount || originalFlashcards.length;
             isShuffled = progress.isShuffled;
@@ -179,7 +165,6 @@ document.addEventListener("DOMContentLoaded", () => {
             onProgressLoaded(true);
           },
           () => {
-            // NO
             clearProgress();
             onProgressLoaded(false);
           }
@@ -189,7 +174,6 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    // Fungsi Inti Aplikasi
     function shuffleArray(array) {
       for (let i = array.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -197,20 +181,14 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    // (DIKEMBALIKAN) Logika counter sebelumnya
     function updateCounter() {
       if (learningMode === "bebas") {
         cardCounter.textContent = `${sessionProgress} / ${originalFlashcards.length}`;
       } else {
-        // (DIKEMBALIKAN) Tampilkan progres jawaban benar
         cardCounter.textContent = `${correctAnswers} / ${totalCardCount}`;
       }
     }
 
-    // (DIHAPUS) Fungsi speakText
-    // async function speakText(text) { ... }
-
-    // REVISI: showCard (disederhanakan, tanpa audio)
     function showCard(index) {
       if (!currentFlashcards || currentFlashcards.length === 0) return;
       currentCardIndex =
@@ -221,10 +199,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const textToDisplay = newCardData.front;
       cardFront.textContent = textToDisplay;
       cardBack.innerHTML = newCardData.back;
-      updateCounter(); // Panggil updateCounter di sini
-
-      // (DIHAPUS) Panggilan speakText
-      // speakText(textToDisplay);
+      updateCounter();
     }
 
     function toggleShuffle() {
@@ -242,25 +217,19 @@ document.addEventListener("DOMContentLoaded", () => {
       if (currentFlashcards.length > 0) {
         isFlipped = !isFlipped;
         card.classList.toggle("is-flipped");
-
-        // (DIHAPUS) Semua logika audio
       }
     }
 
-    // REVISI: transitionToCard (disederhanakan, tanpa audio)
     function transitionToCard(newIndex) {
       if (appContainer.classList.contains("is-changing")) return;
 
       const flipFirst = isFlipped;
 
-      // (DIHAPUS) Semua logika audio
-
-      // Fungsi untuk ganti konten kartu
       const changeCardContent = () => {
         appContainer.classList.add("is-changing");
         try {
           setTimeout(() => {
-            showCard(newIndex); // Panggil showCard (tanpa audio)
+            showCard(newIndex);
           }, 150);
         } catch (e) {
           console.error("Error saat transisi kartu:", e);
@@ -280,20 +249,16 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    // --- Logika Navigasi BARU ---
-
     function prevCard() {
       if (currentCardIndex > 0) {
         if (learningMode === "bebas" && sessionProgress > 1) {
           sessionProgress--;
         }
-        // (DIKEMBALIKAN) Hanya mode bebas yang bisa 'prev' di logika ini
-        // (Logika 'prev' mode test ditangani di listener)
+
         if (learningMode === "bebas") {
           transitionToCard(currentCardIndex - 1);
           saveProgress();
         } else if (learningMode === "test") {
-          // Mode test juga bisa 'prev'
           transitionToCard(currentCardIndex - 1);
           saveProgress();
         }
@@ -313,7 +278,6 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    // (DIKEMBALIKAN) Logika 'checkTestRound'
     function checkTestRound() {
       if (currentCardIndex + 1 >= currentFlashcards.length) {
         if (wrongPile.length > 0) {
@@ -341,14 +305,13 @@ document.addEventListener("DOMContentLoaded", () => {
               window.location.href = "../index.html";
             },
             null
-          ); // (DIKEMBALIKAN) Logika 'null'
+          );
         }
         return true;
       }
       return false;
     }
 
-    // (DIKEMBALIKAN) Logika 'handleCorrect' (Mode Test)
     function handleCorrect() {
       if (learningMode !== "test" || currentFlashcards.length === 0) return;
 
@@ -361,10 +324,9 @@ document.addEventListener("DOMContentLoaded", () => {
       transitionToCard(currentCardIndex + 1);
     }
 
-    // (DIKEMBALIKAN) Logika 'handleWrong' (Mode Test)
     function handleWrong() {
       if (learningMode !== "test" || currentFlashcards.length === 0) return;
-      const cardData = currentFlashcards[currentCardIndex]; // Gunakan variabel lokal
+      const cardData = currentFlashcards[currentCardIndex];
 
       cardData.answered = "wrong";
 
@@ -381,16 +343,11 @@ document.addEventListener("DOMContentLoaded", () => {
       transitionToCard(currentCardIndex + 1);
     }
 
-    // Fungsi Tema
     function handleThemeToggle() {
       const isDarkMode = document.body.classList.toggle("dark-mode");
       localStorage.setItem("theme", isDarkMode ? "dark" : "light");
     }
 
-    // (DIHAPUS) Fungsi toggleAudio
-    // function toggleAudio() { ... }
-
-    // Event Listeners
     document.addEventListener("keydown", (e) => {
       if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key))
         e.preventDefault();
@@ -403,49 +360,37 @@ document.addEventListener("DOMContentLoaded", () => {
           learningMode === "bebas" ? nextCard() : handleCorrect();
           break;
         case "ArrowLeft":
-          prevCard(); // (DIKEMBALIKAN) prevCard dipanggil di sini
+          prevCard();
           break;
       }
     });
 
     if (card) card.addEventListener("click", flipCard);
-    if (themeToggle) themeToggle.addEventListener("change", handleThemeToggle);
 
-    // Mode Bebas
+    if (themeToggle) themeToggle.addEventListener("click", handleThemeToggle);
+
     if (prevButtonSVG) prevButtonSVG.addEventListener("click", prevCard);
     if (nextButtonSVG) nextButtonSVG.addEventListener("click", nextCard);
     if (shuffleButtonBebas)
       shuffleButtonBebas.addEventListener("click", toggleShuffle);
-    // (DIHAPUS) Listener tombol audio
-    // if (toggleAudioButton) { ... }
 
-    // Mode Test
     if (prevButtonTestSVG)
-      prevButtonTestSVG.addEventListener("click", prevCard); // (DIKEMBALIKAN) Listener 'prev'
+      prevButtonTestSVG.addEventListener("click", prevCard);
     if (correctButtonSVG)
       correctButtonSVG.addEventListener("click", handleCorrect);
     if (wrongButtonSVG) wrongButtonSVG.addEventListener("click", handleWrong);
     if (shuffleButtonTest)
       shuffleButtonTest.addEventListener("click", toggleShuffle);
 
-    // Inisialisasi UI
-    if (document.body.classList.contains("dark-mode")) {
-      if (themeToggle) themeToggle.checked = true;
-    }
-
-    // Muat Progres dan Mulai Aplikasi
     loadProgress((progresDimuat) => {
       if (!progresDimuat) {
         currentFlashcards = [...originalFlashcards];
-        totalCardCount = originalFlashcards.length; // (DIKEMBALIKAN)
+        totalCardCount = originalFlashcards.length;
         if (learningMode === "test" || isShuffled) {
           shuffleArray(currentFlashcards);
         }
       }
 
-      // (DIHAPUS) initializeAudioButton();
-
-      // (DIKEMBALIKAN) Pengecekan TCC
       if (progresDimuat && !totalCardCount) {
         totalCardCount = currentFlashcards.length;
       }
@@ -455,7 +400,3 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
-
-// (DIHAPUS) Semua helper function audio
-// function base64ToArrayBuffer(base64) { ... }
-// function pcmToWav(pcmData, sampleRate, numChannels) { ... }
