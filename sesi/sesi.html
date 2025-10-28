@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- (BARU) Mencegah 'loncatan' layout di mobile -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>𒁍Kotoba Flashcard</title>
+    <!-- (DIPERBAIKI) Menambahkan ../ untuk naik satu level -->
+    <link rel="stylesheet" href="../style.css"> 
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,200;1,300;1,400;1,500;1,600;1,700;1,800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <script>
+      (function() {
+        const savedTheme = localStorage.getItem('theme');
+        const userPrefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (savedTheme === 'dark' || (!savedTheme && userPrefersDark)) {
+          document.body.classList.add('dark-mode');
+        }
+      })();
+    </script>
+
+    <!-- (DIPERBAIKI) Menambahkan ../ untuk naik satu level -->
+    <a href="../index.html" class="back-link">← Menu Utama</a>
+
+    <div class="theme-switch-wrapper">
+        <label class="theme-switch" for="checkbox">
+            <input type="checkbox" id="checkbox" />
+            <div class="slider round"></div>
+        </label>
+    </div>
+
+    <div id="app" class="app-container">
+        <!-- (BARU) Logo Header -->
+        <img src="../img/logo.svg" class="watermark-logo" alt="Logo Watermark">
+            
+        <!-- (BARU) Wrapper untuk flex-grow -->
+        <div class="card-scene-wrapper">
+            <div class="card-scene">
+                <div class="card" id="flashcard">
+                    <div class="card__face card__face--front" id="card-front">Memuat Data...</div>
+                    <div class="card__face card__face--back" id="card-back"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- (BARU) Kontrol sekarang fixed di bawah -->
+        <div class="controls-container">
+            <!-- (BARU DITAMBAHKAN) Kontrol Kecepatan Auto-Play -->
+            <div class="autoplay-controls" id="autoplay-controls" style="display: none;">
+                <label for="autoplay-speed">Kecepatan: <span id="autoplay-speed-value">3</span> detik</label>
+                <input type="range" id="autoplay-speed" min="1" max="10" value="3" class="speed-slider">
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="progress-bar"></div>
+            </div>
+            <div class="card-counter" id="card-counter">0 / 0</div>
+
+            <!-- Kontrol Mode Bebas (Tombol Auto-play ditambahkan) -->
+            <div class="button-bar controls-bebas">
+                <div id="prev-button-svg" class="nav-btn-svg"><img src="../img/left.svg" alt="Sebelumnya"></div>
+                <div id="shuffle-button-bebas" class="shuffle-btn"><img src="../img/acak.svg" alt="Acak Kartu"></div>
+                <!-- (BARU DITAMBAHKAN) Tombol Auto-Play -->
+                <div id="auto-play-button" class="nav-btn-svg"><img src="../img/otomatis.svg" alt="Otomatis"></div>
+                <div id="next-button-svg" class="nav-btn-svg"><img src="../img/right.svg" alt="Selanjutnya"></div>
+            </div>
+            
+            <!-- Kontrol Mode Test (Urutan sudah diperbaiki) -->
+            <div class="button-bar controls-test">
+                <div id="prev-button-svg-test" class="nav-btn-svg"><img src="../img/left.svg" alt="Sebelumnya"></div> 
+                <button id="btn-action-wrong" class="btn-action">
+                    <img src="../img/silang.svg" alt=""> Salah
+                </button>
+                <button id="btn-action-correct" class="btn-action">
+                    <img src="../img/ceklis.svg" alt=""> Benar
+                </button>
+                <div id="shuffle-button-test" class="shuffle-btn"><img src="../img/acak.svg" alt="Acak Kartu"></div>
+
+                <!-- Tombol asli (disembunyikan oleh CSS) untuk app.js -->
+                <div id="wrong-button-svg" class="nav-btn-svg"><img src="../img/silang.svg" alt="Salah"></div>
+                <div id="correct-button-svg" class="nav-btn-svg"><img src="../img/ceklis.svg" alt="Benar"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Kustom (Tidak berubah) -->
+    <div id="custom-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <p id="modal-text" style="font-size: 1.2rem; margin-bottom: 2rem;">Teks modal default</p>
+            <div class="modal-buttons" style="flex-direction: row; justify-content: center;">
+                <button id="modal-button-yes" class="modal-button btn-primary" style="min-width: 100px;">Ya</button>
+                <button id="modal-button-no" class="modal-button btn-secondary" style="min-width: 100px; margin-left: 1rem;">Tidak</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- (DIPERBAIKI) Menambahkan ../ untuk naik satu level -->
+    <script src="../js/app.js"></script>
+    
+    <!-- (DIPERBARUI) Skrip untuk Progress Bar, Auto-Play, & Padding Dinamis -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            
+            // --- Elemen untuk Progress Bar ---
+            const progressBar = document.getElementById('progress-bar');
+            const counterElement = document.getElementById('card-counter');
+
+            if (counterElement) {
+                const observer = new MutationObserver((mutations) => {
+                    mutations.forEach((mutation) => {
+                        if ((mutation.type === 'childList' || mutation.type === 'characterData') && counterElement.textContent) {
+                            try {
+                                const text = counterElement.textContent; // Cth: "5 / 20"
+                                const parts = text.split('/').map(s => parseInt(s.trim()));
+                                
+                                if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1]) && parts[1] > 0) {
+                                    const [current, total] = parts;
+                                    const percentage = (current / total) * 100;
+                                    if (progressBar) progressBar.style.width = `${percentage}%`;
+                                } else if (parts.length === 2 && parts[1] === 0) {
+                                    if (progressBar) progressBar.style.width = '0%';
+                                }
+                            } catch (e) {
+                                // console.error("Error parsing card counter:", e);
+                                if (progressBar) progressBar.style.width = '0%';
+                            }
+                        }
+                    });
+                });
+                observer.observe(counterElement, { childList: true, subtree: true, characterData: true });
+            }
+
+            // --- Elemen untuk Tombol Aksi (Mode Test) ---
+            const btnActionWrong = document.getElementById('btn-action-wrong');
+            const btnActionCorrect = document.getElementById('btn-action-correct');
+            const originalWrongBtn = document.getElementById('wrong-button-svg');
+            const originalCorrectBtn = document.getElementById('correct-button-svg');
+
+            if (btnActionWrong && originalWrongBtn) {
+                btnActionWrong.addEventListener('click', () => originalWrongBtn.click());
+            }
+            if (btnActionCorrect && originalCorrectBtn) {
+                btnActionCorrect.addEventListener('click', () => originalCorrectBtn.click());
+            }
+
+            // --- (DIPERBAIKI) Logika untuk Auto-Play ---
+            const autoPlayButton = document.getElementById('auto-play-button');
+            const autoPlayControls = document.getElementById('autoplay-controls');
+            const autoPlaySpeedSlider = document.getElementById('autoplay-speed');
+            const autoPlaySpeedValue = document.getElementById('autoplay-speed-value');
+            const flashcard = document.getElementById('flashcard');
+            const nextButtonSvg = document.getElementById('next-button-svg'); // Tombol 'Next' dari mode bebas
+
+            // (BARU) Variabel untuk padding dinamis
+            const root = document.documentElement;
+            const controlsContainer = document.querySelector('.controls-container');
+
+            let isAutoPlaying = false;
+            let autoPlayTimer = null;
+            let currentSpeed = 3000; // Default 3 detik (dalam ms)
+            let programmaticClick = false; // (DIPERBAIKI) Flag untuk melacak klik programatik
+
+            // (BARU) Fungsi untuk update padding dinamis
+            function updateAppPadding() {
+                if (controlsContainer) {
+                    const height = controlsContainer.offsetHeight;
+                    // Tambahkan 20px ekstra sebagai 'nafas'
+                    root.style.setProperty('--controls-height', (height + 20) + 'px');
+                }
+            }
+            
+            // Panggil sekali saat load untuk mengatur padding awal
+            updateAppPadding();
+            // Panggil lagi jika ukuran jendela berubah (misal HP diputar)
+            window.addEventListener('resize', updateAppPadding);
+
+
+            // Fungsi rekursif yang aman untuk auto-play
+            function autoPlayStep() {
+                if (!isAutoPlaying || !flashcard || !nextButtonSvg) return; // Berhenti jika ditoggle off
+
+                // Pastikan kartu menghadap depan sebelum memulai timer
+                programmaticClick = true; // (DIPERBAIKI) Set flag
+                if (flashcard.classList.contains('is-flipped')) {
+                    flashcard.click(); // Balik ke depan
+                }
+
+                // 1. Tampilkan DEPAN, tunggu 'currentSpeed'
+                autoPlayTimer = setTimeout(() => {
+                    if (!isAutoPlaying) return; // Cek lagi kalau user mematikan
+                    
+                    // 2. Balik ke BELAKANG, tunggu 'currentSpeed'
+                    programmaticClick = true; // (DIPERBAIKI) Set flag
+                    if (!flashcard.classList.contains('is-flipped')) {
+                         flashcard.click(); // Balik ke belakang
+                    }
+                    
+                    autoPlayTimer = setTimeout(() => {
+                        if (!isAutoPlaying) return;
+
+                        // 3. Pindah ke KARTU BERIKUTNYA
+                        nextButtonSvg.click();
+                        
+                        // 4. Jadwalkan langkah berikutnya
+                        // (Kartu berikutnya akan otomatis di depan, memulai siklus lagi)
+                        autoPlayStep(); 
+
+                    }, currentSpeed);
+                }, currentSpeed);
+            }
+
+            function startAutoPlay() {
+                isAutoPlaying = true;
+                autoPlayButton.classList.add('active');
+                autoPlayControls.style.display = 'flex';
+                updateAppPadding(); // (BARU) Hitung ulang padding
+                autoPlayStep(); // Mulai siklus
+            }
+
+            function stopAutoPlay() {
+                isAutoPlaying = false;
+                autoPlayButton.classList.remove('active');
+                autoPlayControls.style.display = 'none';
+                updateAppPadding(); // (BARU) Hitung ulang padding
+                clearTimeout(autoPlayTimer); // Hentikan timer yang sedang berjalan
+            }
+
+            // Event Listener untuk tombol auto-play
+            if (autoPlayButton) {
+                autoPlayButton.addEventListener('click', () => {
+                    if (isAutoPlaying) {
+                        stopAutoPlay();
+                    } else {
+                        // Cek apakah di mode bebas
+                        if (document.body.classList.contains('mode-bebas')) {
+                            startAutoPlay();
+                        }
+                    }
+                });
+            }
+
+            // Event Listener untuk slider kecepatan
+            if (autoPlaySpeedSlider && autoPlaySpeedValue) {
+                autoPlaySpeedSlider.addEventListener('input', () => {
+                    const speedInSeconds = parseInt(autoPlaySpeedSlider.value);
+                    currentSpeed = speedInSeconds * 1000;
+                    autoPlaySpeedValue.textContent = speedInSeconds;
+                    
+                    // Jika sedang berjalan, restart siklusnya dengan kecepatan baru
+                    if (isAutoPlaying) {
+                        clearTimeout(autoPlayTimer);
+                        autoPlayStep();
+                    }
+                });
+            }
+
+             // (DIPERBAIKI) Hentikan auto-play jika kartu dibalik manual
+             if (flashcard) {
+                flashcard.addEventListener('click', () => {
+                    if(isAutoPlaying) {
+                        if (programmaticClick) {
+                            // Ini adalah klik programatik, reset flag dan JANGAN stop
+                            programmaticClick = false;
+                            return;
+                        }
+                        // Ini adalah klik manual user, stop
+                        stopAutoPlay();
+                    }
+                });
+             }
+             // Hentikan juga jika user klik prev/next manual
+             const prevButtonSvg = document.getElementById('prev-button-svg');
+             if (prevButtonSvg) {
+                 prevButtonSvg.addEventListener('click', stopAutoPlay);
+             }
+             if (nextButtonSvg) {
+                 nextButtonSvg.addEventListener('click', () => {
+                     if(isAutoPlaying) {
+                         // Jika auto-play, jangan stop, tapi restart timernya
+                         clearTimeout(autoPlayTimer);
+                         autoPlayStep();
+                     }
+                 });
+             }
+             // Hentikan jika shuffle diklik
+             const shuffleButtonBebas = document.getElementById('shuffle-button-bebas');
+             if(shuffleButtonBebas) {
+                shuffleButtonBebas.addEventListener('click', stopAutoPlay);
+             }
+
+        });
+    </script>
+</body>
+</html>
+

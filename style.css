@@ -1,0 +1,681 @@
+/* --- Variabel Warna (BARU) --- */
+:root {
+    /* Warna Brand/Utama */
+    --color-brand: hsl(210, 80%, 55%);
+    --color-brand-hover: hsl(210, 80%, 45%);
+    --color-brand-light-text: hsl(210, 100%, 95%);
+    
+    /* Warna Fungsional */
+    --color-correct: hsl(145, 63%, 42%);
+    --color-correct-hover: hsl(145, 63%, 35%);
+    --color-wrong: hsl(0, 72%, 50%);
+    --color-wrong-hover: hsl(0, 72%, 40%);
+    
+    /* Palet Warna Light Mode */
+    --bg-light: #f4f7fa;
+    --card-bg-light: #ffffff;
+    --text-light: #1f2937;
+    --text-light-subtle: #6b7280;
+    --border-light: #e5e7eb;
+    --shadow-light: rgba(0, 0, 0, 0.08);
+
+    /* Palet Warna Dark Mode */
+    --bg-dark: #111827;
+    --card-bg-dark: #1f2937;
+    --text-dark: #f9fafb;
+    --text-dark-subtle: #9ca3af;
+    --border-dark: #374151;
+    --shadow-dark: rgba(0, 0, 0, 0.2);
+
+    /* --- Variabel Aktif (Default ke Light) --- */
+    --bg-color: var(--bg-light);
+    --card-bg-color: var(--card-bg-light);
+    --text-color: var(--text-light);
+    --text-subtle-color: var(--text-light-subtle);
+    --border-color: var(--border-light);
+    --shadow-color: var(--shadow-light);
+    --toggle-handle-color: #ffffff;
+}
+
+body.dark-mode {
+    --bg-color: var(--bg-dark);
+    --card-bg-color: var(--card-bg-dark);
+    --text-color: var(--text-dark);
+    --text-subtle-color: var(--text-dark-subtle);
+    --border-color: var(--border-dark);
+    --shadow-color: var(--shadow-dark);
+    --toggle-handle-color: #374151;
+}
+
+/* --- Pengaturan Dasar & Reset --- */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html, body {
+    height: 100%;
+    font-family: 'Spectral', serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* --- STYLES UNTUK MENU UTAMA (index.html) --- */
+body.menu-page {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 6vh 20px 10vh; /* Padding atas dan bawah */
+}
+
+.menu-container {
+    width: 100%;
+    max-width: 700px; /* Lebih ramping untuk daftar */
+    text-align: center;
+    position: relative; 
+}
+.menu-container h1 {
+    font-size: 2.8rem;
+    color: var(--color-brand);
+    margin-bottom: 0.5rem;
+    font-weight: 800;
+}
+.menu-container .subtitle {
+    font-size: 1.25rem;
+    color: var(--text-subtle-color);
+    margin-bottom: 2.5rem;
+}
+
+/* --- (BARU) Style Accordion Menu --- */
+.category-list {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.category-item {
+    background-color: var(--card-bg-color);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 10px var(--shadow-color);
+    overflow: hidden;
+    transition: all 0.3s ease-in-out;
+}
+
+.category-header {
+    font-family: 'Spectral', serif;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding: 1.25rem 1.5rem;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-color);
+    background-color: var(--card-bg-color);
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+.category-header:hover {
+    background-color: var(--bg-color);
+}
+.category-item.active .category-header {
+    color: var(--color-brand);
+}
+
+.category-header .icon {
+    font-size: 1.5rem;
+    font-weight: 400;
+    color: var(--text-subtle-color);
+    transition: transform 0.3s ease;
+}
+.category-item.active .icon {
+    transform: rotate(45deg);
+    color: var(--color-brand);
+}
+
+.category-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease-in-out, padding 0.3s ease;
+    padding: 0 1.5rem;
+}
+
+.chapter-link-grid {
+    display: grid;
+    /* (DIPERBAIKI) Mengganti 'auto-fill' menjadi '3' agar konsisten */
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+    /* (DIPERBAIKI) Menyamakan padding atas dan bawah agar proporsional */
+    padding-top: 1.5rem; 
+    padding-bottom: 1.5rem; 
+}
+
+.chapter-link {
+    font-family: 'Spectral', serif;
+    font-size: 1.1rem;
+    font-weight: 600;
+    text-decoration: none;
+    color: var(--color-brand);
+    background-color: var(--bg-color);
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    transition: all 0.2s ease;
+}
+.chapter-link:hover {
+    background-color: var(--color-brand);
+    color: var(--card-bg-light);
+    border-color: var(--color-brand);
+    transform: translateY(-2px);
+    box-shadow: 0 2px 8px var(--shadow-color);
+}
+/* --- Akhir Style Accordion --- */
+
+
+/* (DIPERBAIKI) Logo diposisikan ulang ke atas halaman */
+.watermark-logo-menu {
+    position: absolute;
+    top: 20px; /* Jarak dari atas */
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px; /* (BARU) Lebih kecil */
+    height: auto;
+    opacity: 0.5; /* (BARU) Lebih terlihat */
+    z-index: 10; /* Di atas, tapi di bawah modal */
+    user-select: none;
+    -webkit-user-drag: none;
+}
+body.dark-mode .watermark-logo-menu {
+    opacity: 0.7;
+    filter: invert(1);
+}
+
+
+/* --- STYLES UNTUK HALAMAN FLASHCARD (sesi.html) --- */
+
+/* (BARU) Layout Flex untuk menempelkan kontrol ke bawah */
+.app-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh; /* Gunakan min-height */
+    padding: 20px;
+    position: relative;
+    /* (DIPERBAIKI) Menggunakan CSS variable dinamis */
+    /* 230px adalah fallback jika JS gagal */
+    padding-bottom: calc(var(--controls-height, 230px) + env(safe-area-inset-bottom)); 
+    transition: padding-bottom 0.3s ease; /* (BARU) Transisi saat padding berubah */
+}
+
+.back-link { 
+    position: absolute; 
+    top: 25px; 
+    left: 25px; 
+    font-size: 1.1rem; 
+    font-weight: 700; 
+    color: var(--text-subtle-color); 
+    text-decoration: none; 
+    z-index: 20; 
+    background: var(--bg-color); 
+    padding: 8px 12px; 
+    border-radius: 8px; 
+    transition: all 0.3s ease; 
+}
+.back-link:hover {
+    color: var(--color-brand);
+}
+
+.theme-switch-wrapper { 
+    position: absolute; 
+    top: 20px; 
+    right: 20px; 
+    z-index: 10; 
+    display: flex; 
+    align-items: center; 
+}
+.theme-switch { position: relative; display: inline-block; width: 50px; height: 26px; }
+.theme-switch input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--border-color); transition: .4s; }
+.slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 4px; bottom: 4px; background-color: var(--toggle-handle-color); transition: .4s; }
+input:checked + .slider { background-color: var(--color-brand); }
+input:checked + .slider:before { transform: translateX(24px); }
+.slider.round { border-radius: 34px; }
+.slider.round:before { border-radius: 50%; }
+
+/* (BARU) Ini akan mendorong kartu ke tengah secara vertikal */
+.card-scene-wrapper {
+    flex-grow: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    position: relative; 
+    /* (BARU) Beri margin atas agar logo tidak menempel */
+    margin-top: 40px; 
+}
+
+/* (DIPERBAIKI) Logo diposisikan ulang ke atas halaman */
+.watermark-logo {
+    position: absolute;
+    top: -30px; /* (DIPERBAIKI) Pindah ke atas, di luar wrapper scene */
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px; /* (BARU) Lebih kecil */
+    height: auto;
+    opacity: 0.5; /* (BARU) Lebih terlihat */
+    z-index: 5; 
+    user-select: none;
+    -webkit-user-drag: none;
+}
+body.dark-mode .watermark-logo {
+    opacity: 0.7;
+    filter: invert(1);
+}
+/* --- Akhir Watermark --- */
+
+.card-scene { 
+    width: 90vw; 
+    max-width: 500px; 
+    height: 55vh; 
+    max-height: 350px; 
+    perspective: 1500px; 
+    transition: transform 0.2s ease-out; 
+    /* Hapus margin-top, sudah diatur di wrapper */
+}
+.app-container.is-changing .card-scene { transform: scale(0.95); transition-timing-function: ease-in; }
+
+.card { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94); cursor: pointer; }
+.card.is-flipped { transform: rotateX(180deg); }
+
+.card__face { 
+    position: absolute; 
+    width: 100%; 
+    height: 100%; 
+    backface-visibility: hidden; 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    font-weight: 700; 
+    text-align: center; 
+    padding: 25px; 
+    background-color: var(--card-bg-color); 
+    color: var(--text-color); 
+    border-radius: 16px; 
+    box-shadow: 0 8px 24px var(--shadow-color); 
+    border: 2px solid var(--border-color); /* (BARU) Border lebih jelas */
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease; 
+}
+.card__face--front { font-size: 4.5rem; }
+.card__face--back { transform: rotateX(180deg); flex-direction: column; justify-content: center; align-items: center; line-height: 1.6; padding: 30px; }
+.card__face--back .hiragana { 
+    font-size: 2.2rem; 
+    font-weight: 700; 
+    color: var(--color-brand); /* (BARU) Pakai warna brand */
+    margin-bottom: 15px; 
+}
+.card__face--back .definition { font-size: 1.6rem; font-weight: 500; margin-bottom: 20px; }
+.card__face--back .level { 
+    font-size: 1rem; 
+    font-weight: 700; 
+    color: var(--text-subtle-color); 
+    position: absolute; 
+    bottom: 20px; 
+    right: 25px; 
+    background-color: var(--bg-color); 
+    padding: 5px 10px; 
+    border-radius: 5px; 
+    transition: background-color 0.3s ease; 
+}
+
+/* (BARU) Kontrol menempel di bawah */
+.controls-container {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background-color: var(--bg-color);
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 1rem 20px;
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+    z-index: 50;
+    box-shadow: 0 -4px 15px var(--shadow-color);
+    transition: height 0.3s ease; /* (BARU) Transisi saat tinggi berubah */
+}
+
+/* (BARU DITAMBAHKAN) Auto-Play Slider Styles */
+.autoplay-controls {
+    width: 100%;
+    max-width: 500px;
+    /* display: flex; (Diatur oleh JS) */
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    color: var(--text-subtle-color);
+}
+.autoplay-controls label {
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+.speed-slider {
+    width: 80%;
+    max-width: 300px;
+    cursor: pointer;
+    accent-color: var(--color-brand); /* (BARU) Memberi warna modern pada slider */
+}
+/* --- Akhir Auto-Play Styles --- */
+
+
+/* (BARU DITAMBAHKAN) Progress Bar Styles */
+.progress-bar-container {
+    width: 100%;
+    max-width: 500px;
+    height: 10px;
+    background-color: var(--border-color);
+    border-radius: 10px;
+    overflow: hidden;
+    /* Dihapus margin-bottom karena gap di controls-container sdh ada */
+}
+.progress-bar {
+    width: 0%; /* Di-update oleh JS */
+    height: 100%;
+    background-color: var(--color-brand);
+    border-radius: 10px;
+    transition: width 0.4s cubic-bezier(0.25, 1, 0.5, 1); /* Transisi lebih halus */
+}
+/* --- Akhir Progress Bar Styles --- */
+
+.button-bar {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    width: 100%;
+    max-width: 500px;
+}
+
+/* (BARU) Tombol Ikon Sekunder (Acak, Navigasi) */
+.nav-btn-svg, .shuffle-btn {
+    width: 50px;
+    height: 50px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: var(--card-bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px var(--shadow-color);
+    -webkit-tap-highlight-color: transparent;
+}
+.nav-btn-svg:hover, .shuffle-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px var(--shadow-color);
+}
+.nav-btn-svg:active, .shuffle-btn:active {
+    transform: scale(0.95);
+}
+
+.shuffle-btn img, .nav-btn-svg img {
+    width: 24px;
+    height: 24px;
+    transition: filter 0.3s ease;
+    filter: invert(0.5); /* (BARU) Ikon jadi abu-abu */
+}
+body.dark-mode .shuffle-btn img, 
+body.dark-mode .nav-btn-svg img {
+    filter: invert(0.8);
+}
+.shuffle-btn:hover img, .nav-btn-svg:hover img {
+    filter: invert(0.3);
+}
+body.dark-mode .shuffle-btn:hover img, 
+body.dark-mode .nav-btn-svg:hover img {
+    filter: invert(1);
+}
+
+/* (DIPERBARUI) Style Active untuk SEMUA tombol ikon */
+.shuffle-btn.active,
+.nav-btn-svg.active {
+    background-color: var(--color-brand);
+    border-color: var(--color-brand);
+}
+.shuffle-btn.active img,
+.nav-btn-svg.active img {
+    filter: invert(1);
+}
+body.dark-mode .shuffle-btn.active img,
+body.dark-mode .nav-btn-svg.active img {
+    filter: invert(1);
+}
+
+
+/* (BARU) Tombol Aksi Utama (Benar / Salah) */
+/* Sembunyikan tombol asli di mode test */
+.controls-test #wrong-button-svg,
+.controls-test #correct-button-svg {
+    display: none;
+}
+
+/* Ganti dengan tombol baru yang lebih besar */
+.btn-action {
+    font-family: 'Spectral', serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: white;
+    border: none;
+    border-radius: 50px;
+    padding: 0.8rem;
+    height: 60px;
+    cursor: pointer;
+    flex-grow: 1; /* (BARU) Tombol mengisi ruang */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+    box-shadow: 0 4px 15px -5px rgba(0,0,0,0.3);
+    transition: all 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+.btn-action img {
+    width: 20px;
+    height: 20px;
+    filter: invert(1);
+}
+.btn-action:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px -5px rgba(0,0,0,0.4);
+}
+.btn-action:active {
+    transform: scale(0.98);
+    box-shadow: 0 2px 10px -5px rgba(0,0,0,0.3);
+}
+
+#btn-action-wrong {
+    background-color: var(--color-wrong);
+}
+#btn-action-wrong:hover {
+    background-color: var(--color-wrong-hover);
+}
+#btn-action-correct {
+    background-color: var(--color-correct);
+}
+#btn-action-correct:hover {
+    background-color: var(--color-correct-hover);
+}
+
+.card-counter { 
+    font-size: 1.2rem; 
+    font-weight: 600; 
+    color: var(--text-subtle-color);
+}
+
+/* Hapus instruksi "chotoba" yang tidak perlu */
+.nav-instructions { 
+    display: none;
+}
+
+/* --- STYLES UNTUK KONTROL MODE (sesi.html) --- */
+.controls-bebas,
+.controls-test {
+    display: none;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    width: 100%;
+}
+
+body.mode-bebas .controls-bebas {
+    display: flex;
+    justify-content: space-around; /* (OK) 4 tombol akan rapi */
+}
+body.mode-test .controls-test {
+    display: flex;
+    /* (DIPERBAIKI) Menggunakan gap dan alignment standar */
+    justify-content: center;
+    align-items: center;
+    gap: 0.75rem; /* Jarak antar tombol */
+    /* Hapus position: relative */
+}
+
+/* (DIPERBAIKI) Menghapus 'position: absolute' untuk memperbaiki bug */
+.controls-test #prev-button-svg-test {
+    /* Hapus position: absolute; */
+    /* Hapus left: 0; */
+    width: 50px; /* Pastikan ukurannya sama dgn shuffle */
+    height: 50px;
+}
+.controls-test #shuffle-button-test {
+    width: 50px;
+    height: 50px;
+}
+
+
+/* --- STYLES UNTUK MODAL (index.html & sesi.html) --- */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    backdrop-filter: blur(5px);
+}
+
+.modal-content {
+    background-color: var(--card-bg-color);
+    padding: 2.5rem;
+    border-radius: 16px;
+    text-align: center;
+    box-shadow: 0 10px 30px var(--shadow-color);
+    position: relative;
+    width: 90%;
+    max-width: 400px;
+}
+
+.modal-content h3 {
+    font-size: 1.6rem;
+    margin-bottom: 2rem;
+    color: var(--text-color);
+}
+
+.modal-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.modal-button {
+    font-family: 'Spectral', serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    padding: 0.8rem 1.5rem;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+/* (BARU) Tombol Modal Primer (Biru) */
+.modal-button.btn-primary {
+    background-color: var(--color-brand);
+    color: white;
+}
+.modal-button.btn-primary:hover {
+    background-color: var(--color-brand-hover);
+    transform: scale(1.03);
+}
+/* (BARU) Tombol Modal Sekunder (Garis) */
+.modal-button.btn-secondary {
+    background-color: transparent;
+    color: var(--color-brand);
+    border: 2px solid var(--color-brand);
+}
+.modal-button.btn-secondary:hover {
+    background-color: var(--bg-color);
+    transform: scale(1.03);
+}
+
+.modal-close-btn {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    font-size: 2.2rem;
+    color: var(--text-subtle-color);
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+.modal-close-btn:hover {
+    color: var(--text-color);
+}
+
+
+/* --- Media Queries untuk responsif --- */
+@media (max-width: 600px) {
+    .card__face--front { font-size: 3.5rem; }
+    .card__face--back .hiragana { font-size: 1.8rem; }
+    .card__face--back .definition { font-size: 1.3rem; }
+    .back-link { top: 15px; left: 15px; }
+    .theme-switch-wrapper { top: 15px; right: 15px; }
+
+    /* (BARU) Layout tombol test di mobile */
+    .controls-test {
+        gap: 0.5rem;
+    }
+    .controls-test #prev-button-svg-test {
+        position: static; /* Ini sudah benar */
+        width: 44px; /* Kecilkan */
+        height: 44px;
+    }
+    .controls-test #shuffle-button-test {
+        width: 44px;
+        height: 44px;
+    }
+    .controls-test #prev-button-svg-test img,
+    .controls-test #shuffle-button-test img {
+        width: 20px;
+        height: 20px;
+    }
+    
+    .btn-action {
+        height: 55px;
+        font-size: 1rem;
+    }
+}
+

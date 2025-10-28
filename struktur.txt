@@ -1,0 +1,17 @@
+V.0.0.2
+
+flashcard/
+├── index.html
+├── img/
+│   ├── acak.svg
+│   ├── ceklis.svg
+│   ├── kiri.svg
+│   ├── kanan.svg
+│   ├── logo.svg
+│   └── silang.svg
+├── js/
+│   ├── app.js
+│   └── data.js
+├── sesi/
+│   └── sesi.html
+└── style.css
