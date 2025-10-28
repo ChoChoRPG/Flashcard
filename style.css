@@ -54,8 +54,13 @@ body.dark-mode {
     padding: 0;
 }
 
-html, body {
-    height: 100%;
+/* (DIPERBAIKI) Bug background-color di mode gelap */
+html {
+    height: 100%; /* Basis tinggi */
+}
+
+body {
+    min-height: 100%; /* Pastikan body mengisi setidaknya 100% dari html */
     font-family: 'Spectral', serif;
     background-color: var(--bg-color);
     color: var(--text-color);
