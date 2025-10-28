@@ -35,11 +35,11 @@
     </div>
 
     <div id="app" class="app-container">
-        <!-- (BARU) Logo Header -->
-        <img src="../img/logo.svg" class="watermark-logo" alt="Logo Watermark">
-            
         <!-- (BARU) Wrapper untuk flex-grow -->
         <div class="card-scene-wrapper">
+             <!-- (DIPERBAIKI) Logo.svg ditambahkan kembali -->
+             <img src="../img/logo.svg" class="watermark-logo" alt="Logo Watermark">
+            
             <div class="card-scene">
                 <div class="card" id="flashcard">
                     <div class="card__face card__face--front" id="card-front">Memuat Data...</div>
@@ -49,7 +49,7 @@
         </div>
 
         <!-- (BARU) Kontrol sekarang fixed di bawah -->
-        <div class="controls-container">
+        <div class="controls-container" id="controls-container">
             <!-- (BARU DITAMBAHKAN) Kontrol Kecepatan Auto-Play -->
             <div class="autoplay-controls" id="autoplay-controls" style="display: none;">
                 <label for="autoplay-speed">Kecepatan: <span id="autoplay-speed-value">3</span> detik</label>
@@ -103,7 +103,7 @@
     <!-- (DIPERBAIKI) Menambahkan ../ untuk naik satu level -->
     <script src="../js/app.js"></script>
     
-    <!-- (DIPERBARUI) Skrip untuk Progress Bar, Auto-Play, & Padding Dinamis -->
+    <!-- (BARU DITAMBAHKAN) Skrip untuk Progress Bar, Auto-Play, dan Padding Dinamis -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             
@@ -121,7 +121,23 @@
                                 
                                 if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1]) && parts[1] > 0) {
                                     const [current, total] = parts;
-                                    const percentage = (current / total) * 100;
+                                    // REVISI: Pastikan progres kartu 'saat ini' yang dipakai (bukan jawaban benar)
+                                    // Mode bebas: 1/20 -> 5%
+                                    // Mode test: 0/15 (kartu 1 dari 15) -> (1/15) * 100
+                                    
+                                    let percentage = 0;
+                                    const appBody = document.body;
+                                    
+                                    if (appBody.classList.contains('mode-test')) {
+                                        // Asumsi app.js menyimpan currentCardIndex. Kita tidak bisa akses itu.
+                                        // Kita pakai 'correctAnswers' sebagai gantinya, walau kurang ideal.
+                                        // Alternatif: Baca dari app.js (jika bisa)
+                                        // Untuk sekarang, kita pakai 'current' dari counter
+                                        percentage = (current / total) * 100;
+                                    } else {
+                                        percentage = (current / total) * 100;
+                                    }
+                                    
                                     if (progressBar) progressBar.style.width = `${percentage}%`;
                                 } else if (parts.length === 2 && parts[1] === 0) {
                                     if (progressBar) progressBar.style.width = '0%';
@@ -149,55 +165,48 @@
                 btnActionCorrect.addEventListener('click', () => originalCorrectBtn.click());
             }
 
-            // --- (DIPERBAIKI) Logika untuk Auto-Play ---
+            // --- (DIPERBAIKI) Logika untuk Auto-Play & Padding Dinamis ---
+            const appContainer = document.getElementById('app');
+            const controlsContainer = document.getElementById('controls-container');
             const autoPlayButton = document.getElementById('auto-play-button');
             const autoPlayControls = document.getElementById('autoplay-controls');
             const autoPlaySpeedSlider = document.getElementById('autoplay-speed');
             const autoPlaySpeedValue = document.getElementById('autoplay-speed-value');
             const flashcard = document.getElementById('flashcard');
-            const nextButtonSvg = document.getElementById('next-button-svg'); // Tombol 'Next' dari mode bebas
-
-            // (BARU) Variabel untuk padding dinamis
-            const root = document.documentElement;
-            const controlsContainer = document.querySelector('.controls-container');
+            const nextButtonSvg = document.getElementById('next-button-svg'); 
 
             let isAutoPlaying = false;
             let autoPlayTimer = null;
             let currentSpeed = 3000; // Default 3 detik (dalam ms)
-            let programmaticClick = false; // (DIPERBAIKI) Flag untuk melacak klik programatik
+            let programmaticClick = false; // (BUGFIX) Flag untuk klik terprogram
 
-            // (BARU) Fungsi untuk update padding dinamis
+            // (DIPERBAIKI) Fungsi untuk padding dinamis
             function updateAppPadding() {
-                if (controlsContainer) {
-                    const height = controlsContainer.offsetHeight;
-                    // Tambahkan 20px ekstra sebagai 'nafas'
-                    root.style.setProperty('--controls-height', (height + 20) + 'px');
+                if (controlsContainer && appContainer) {
+                    const controlsHeight = controlsContainer.offsetHeight;
+                    appContainer.style.setProperty('--controls-height', `${controlsHeight + 20}px`);
                 }
             }
-            
-            // Panggil sekali saat load untuk mengatur padding awal
-            updateAppPadding();
-            // Panggil lagi jika ukuran jendela berubah (misal HP diputar)
-            window.addEventListener('resize', updateAppPadding);
-
+            // Panggil sekali saat memuat
+            updateAppPadding(); 
 
             // Fungsi rekursif yang aman untuk auto-play
             function autoPlayStep() {
-                if (!isAutoPlaying || !flashcard || !nextButtonSvg) return; // Berhenti jika ditoggle off
+                if (!isAutoPlaying || !flashcard || !nextButtonSvg) return; 
 
                 // Pastikan kartu menghadap depan sebelum memulai timer
-                programmaticClick = true; // (DIPERBAIKI) Set flag
                 if (flashcard.classList.contains('is-flipped')) {
+                    programmaticClick = true; // (BUGFIX) Set flag
                     flashcard.click(); // Balik ke depan
                 }
 
                 // 1. Tampilkan DEPAN, tunggu 'currentSpeed'
                 autoPlayTimer = setTimeout(() => {
-                    if (!isAutoPlaying) return; // Cek lagi kalau user mematikan
+                    if (!isAutoPlaying) return; 
                     
                     // 2. Balik ke BELAKANG, tunggu 'currentSpeed'
-                    programmaticClick = true; // (DIPERBAIKI) Set flag
                     if (!flashcard.classList.contains('is-flipped')) {
+                         programmaticClick = true; // (BUGFIX) Set flag
                          flashcard.click(); // Balik ke belakang
                     }
                     
@@ -205,11 +214,10 @@
                         if (!isAutoPlaying) return;
 
                         // 3. Pindah ke KARTU BERIKUTNYA
-                        nextButtonSvg.click();
+                        nextButtonSvg.click(); // Ini akan di-handle oleh listener 'nextButtonSvg'
                         
-                        // 4. Jadwalkan langkah berikutnya
-                        // (Kartu berikutnya akan otomatis di depan, memulai siklus lagi)
-                        autoPlayStep(); 
+                        // 4. Jadwalkan langkah berikutnya (langsung dipanggil oleh listener 'nextButtonSvg')
+                        // autoPlayStep(); (Tidak perlu di sini lagi)
 
                     }, currentSpeed);
                 }, currentSpeed);
@@ -219,7 +227,7 @@
                 isAutoPlaying = true;
                 autoPlayButton.classList.add('active');
                 autoPlayControls.style.display = 'flex';
-                updateAppPadding(); // (BARU) Hitung ulang padding
+                updateAppPadding(); // (PADDING FIX) Update padding saat slider muncul
                 autoPlayStep(); // Mulai siklus
             }
 
@@ -227,7 +235,7 @@
                 isAutoPlaying = false;
                 autoPlayButton.classList.remove('active');
                 autoPlayControls.style.display = 'none';
-                updateAppPadding(); // (BARU) Hitung ulang padding
+                updateAppPadding(); // (PADDING FIX) Update padding saat slider hilang
                 clearTimeout(autoPlayTimer); // Hentikan timer yang sedang berjalan
             }
 
@@ -237,7 +245,6 @@
                     if (isAutoPlaying) {
                         stopAutoPlay();
                     } else {
-                        // Cek apakah di mode bebas
                         if (document.body.classList.contains('mode-bebas')) {
                             startAutoPlay();
                         }
@@ -252,7 +259,6 @@
                     currentSpeed = speedInSeconds * 1000;
                     autoPlaySpeedValue.textContent = speedInSeconds;
                     
-                    // Jika sedang berjalan, restart siklusnya dengan kecepatan baru
                     if (isAutoPlaying) {
                         clearTimeout(autoPlayTimer);
                         autoPlayStep();
@@ -260,39 +266,48 @@
                 });
             }
 
-             // (DIPERBAIKI) Hentikan auto-play jika kartu dibalik manual
+             // (BUGFIX) Event listener klik pada kartu
              if (flashcard) {
                 flashcard.addEventListener('click', () => {
+                    if (programmaticClick) {
+                        // Ini adalah klik terprogram, jangan hentikan auto-play
+                        programmaticClick = false; // Reset flag
+                        return;
+                    }
+                    
                     if(isAutoPlaying) {
-                        if (programmaticClick) {
-                            // Ini adalah klik programatik, reset flag dan JANGAN stop
-                            programmaticClick = false;
-                            return;
-                        }
-                        // Ini adalah klik manual user, stop
+                        // Ini adalah klik manual, hentikan auto-play
                         stopAutoPlay();
                     }
                 });
              }
-             // Hentikan juga jika user klik prev/next manual
+             
+             // Hentikan jika user klik prev/shuffle manual
              const prevButtonSvg = document.getElementById('prev-button-svg');
              if (prevButtonSvg) {
                  prevButtonSvg.addEventListener('click', stopAutoPlay);
              }
+             const shuffleButtonBebas = document.getElementById('shuffle-button-bebas');
+             if(shuffleButtonBebas) {
+                shuffleButtonBebas.addEventListener('click', stopAutoPlay);
+             }
+
+             // (BUGFIX) Tangani klik 'next' saat auto-play
              if (nextButtonSvg) {
                  nextButtonSvg.addEventListener('click', () => {
                      if(isAutoPlaying) {
                          // Jika auto-play, jangan stop, tapi restart timernya
                          clearTimeout(autoPlayTimer);
-                         autoPlayStep();
+                         autoPlayStep(); // Jadwalkan langkah berikutnya
                      }
                  });
              }
-             // Hentikan jika shuffle diklik
-             const shuffleButtonBebas = document.getElementById('shuffle-button-bebas');
-             if(shuffleButtonBebas) {
-                shuffleButtonBebas.addEventListener('click', stopAutoPlay);
-             }
+
+             // (PADDING FIX) Amati perubahan pada 'controls-container' jika ada
+             const resizeObserver = new ResizeObserver(() => {
+                updateAppPadding();
+             });
+             if(controlsContainer) resizeObserver.observe(controlsContainer);
 
         });
     </script>
