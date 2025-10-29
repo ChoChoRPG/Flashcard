@@ -3,12 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>𒁍Kotoba Flashcard</title>
+    <title>Chotoba - Sesi Belajar</title>
     <link rel="stylesheet" href="../style.css">
-    <link rel="icon" href="../img/logos.svg" type="image/svg+xml">
+    <link rel="icon" href="../img/logo.svg" type="image/svg+xml">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* CSS untuk canvas konfeti */
+        #confetti-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1001; /* Di atas segalanya kecuali modal */
+            pointer-events: none; /* Agar tidak menghalangi klik */
+        }
+    </style>
 </head>
 <body>
 
@@ -21,6 +33,9 @@
         }
       })();
     </script>
+
+    <!-- Canvas untuk Konfeti -->
+    <canvas id="confetti-canvas"></canvas>
 
     <a href="../index.html" class="nav-btn-svg" id="back-to-menu-btn" title="Kembali ke Menu">
         <img src="../img/left.svg" alt="Menu Utama">
@@ -111,6 +126,8 @@
     </div>
 
     <script src="../js/app.js"></script>
+    <!-- Script Library Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -133,7 +150,10 @@
                                     const appBody = document.body;
 
                                     if (appBody.classList.contains('mode-test')) {
-                                        percentage = (current / total) * 100;
+                                         const cardIndex = parseInt(parts[0]) - 1;
+                                         if(!isNaN(cardIndex) && cardIndex >= 0) {
+                                             percentage = ((cardIndex + 1) / total) * 100;
+                                         }
                                     } else {
                                         percentage = (current / total) * 100;
                                     }
@@ -143,13 +163,33 @@
                                     if (progressBar) progressBar.style.width = '0%';
                                 }
                             } catch (e) {
+                                console.error("Error updating progress bar:", e);
                                 if (progressBar) progressBar.style.width = '0%';
                             }
                         }
                     });
                 });
                 observer.observe(counterElement, { childList: true, subtree: true, characterData: true });
+
+                 try {
+                     const text = counterElement.textContent;
+                     const parts = text.split('/').map(s => parseInt(s.trim()));
+                     if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1]) && parts[1] > 0) {
+                         const [current, total] = parts;
+                         let percentage = (current / total) * 100;
+                          if (document.body.classList.contains('mode-test')) {
+                              const cardIndex = parseInt(parts[0]) - 1;
+                              if(!isNaN(cardIndex) && cardIndex >= 0) percentage = ((cardIndex + 1) / total) * 100;
+                          }
+                         if (progressBar) progressBar.style.width = `${percentage}%`;
+                     } else if (progressBar) {
+                          progressBar.style.width = '0%';
+                     }
+                 } catch(e){
+                      if (progressBar) progressBar.style.width = '0%';
+                 }
             }
+
 
             const btnActionWrong = document.getElementById('btn-action-wrong');
             const btnActionCorrect = document.getElementById('btn-action-correct');

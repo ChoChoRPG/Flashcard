@@ -13,13 +13,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function loadDataScript(callback) {
     const script = document.createElement("script");
-    script.src = `../js/data_${babId}.js`;
+    script.src = `../js/Data${babId}.js`;
     script.onload = () => {
-      console.log(`data_${babId}.js loaded successfully.`);
-      callback();
+      console.log(`Data${babId}.js loaded successfully.`);
+      if (typeof dataString !== "undefined") {
+        callback();
+      } else {
+        console.error(
+          `dataString tidak ditemukan setelah memuat Data${babId}.js`
+        );
+        document.getElementById(
+          "card-front"
+        ).textContent = `Data string kosong di Data${babId}.js`;
+      }
     };
     script.onerror = () => {
-      console.error(`Failed to load data_${babId}.js.`);
+      console.error(`Failed to load Data${babId}.js.`);
       document.getElementById(
         "card-front"
       ).textContent = `Data untuk Bab ${babId} tidak ditemukan.`;
@@ -54,6 +63,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const modalButtonYes = document.getElementById("modal-button-yes");
     const modalButtonNo = document.getElementById("modal-button-no");
 
+    // Dapatkan elemen canvas konfeti
+    const confettiCanvas = document.getElementById("confetti-canvas");
+    const myConfetti = confettiCanvas
+      ? confetti.create(confettiCanvas, { resize: true })
+      : null;
+
     let originalFlashcards = [];
     let currentFlashcards = [];
     let wrongPile = [];
@@ -68,7 +83,6 @@ document.addEventListener("DOMContentLoaded", () => {
       cardFront.textContent = "Data kosong atau tidak valid.";
       return;
     }
-
     const lines = dataString.trim().split("\n");
     for (const line of lines) {
       if (line.trim() === "" || line.startsWith(";")) continue;
@@ -85,12 +99,20 @@ document.addEventListener("DOMContentLoaded", () => {
         if (definition.startsWith('"') && definition.endsWith('"')) {
           definition = definition.substring(1, definition.length - 1);
         }
-        const back = `<div class="hiragana">${hiragana}</div><div class="definition">${definition}</div><div class="level">${level}</div>`;
-        originalFlashcards.push({ front, back, answered: null });
+        const backHTML = `<div class="hiragana">${hiragana}</div><div class="definition">${definition}</div><div class="level">${level}</div>`;
+        originalFlashcards.push({ front, back: backHTML, answered: null });
       } catch (e) {
         console.error("Gagal mem-parsing baris:", line, e);
       }
     }
+
+    if (originalFlashcards.length === 0) {
+      cardFront.textContent = "Tidak ada kartu untuk ditampilkan.";
+      const controls = document.getElementById("controls-container");
+      if (controls) controls.style.display = "none";
+      return;
+    }
+
     totalCardCount = originalFlashcards.length;
 
     function showModal(text, yesCallback, noCallback) {
@@ -160,8 +182,10 @@ document.addEventListener("DOMContentLoaded", () => {
             totalCardCount =
               progress.totalCardCount || originalFlashcards.length;
             isShuffled = progress.isShuffled;
-            shuffleButtonBebas.classList.toggle("active", isShuffled);
-            shuffleButtonTest.classList.toggle("active", isShuffled);
+            if (shuffleButtonBebas)
+              shuffleButtonBebas.classList.toggle("active", isShuffled);
+            if (shuffleButtonTest)
+              shuffleButtonTest.classList.toggle("active", isShuffled);
             onProgressLoaded(true);
           },
           () => {
@@ -185,7 +209,9 @@ document.addEventListener("DOMContentLoaded", () => {
       if (learningMode === "bebas") {
         cardCounter.textContent = `${sessionProgress} / ${originalFlashcards.length}`;
       } else {
-        cardCounter.textContent = `${correctAnswers} / ${totalCardCount}`;
+        cardCounter.textContent = `${currentCardIndex + 1} / ${
+          currentFlashcards.length
+        }`;
       }
     }
 
@@ -204,10 +230,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function toggleShuffle() {
       isShuffled = !isShuffled;
-      shuffleButtonBebas.classList.toggle("active", isShuffled);
-      shuffleButtonTest.classList.toggle("active", isShuffled);
+      if (shuffleButtonBebas)
+        shuffleButtonBebas.classList.toggle("active", isShuffled);
+      if (shuffleButtonTest)
+        shuffleButtonTest.classList.toggle("active", isShuffled);
       if (isShuffled) {
         shuffleArray(currentFlashcards);
+        if (learningMode === "bebas") {
+          sessionProgress = 1;
+        }
+        transitionToCard(0);
+      } else {
+        currentFlashcards = [...originalFlashcards];
+        if (learningMode === "bebas") {
+          sessionProgress = 1;
+        }
         transitionToCard(0);
       }
       saveProgress();
@@ -255,25 +292,39 @@ document.addEventListener("DOMContentLoaded", () => {
           sessionProgress--;
         }
 
-        if (learningMode === "bebas") {
-          transitionToCard(currentCardIndex - 1);
-          saveProgress();
-        } else if (learningMode === "test") {
-          transitionToCard(currentCardIndex - 1);
-          saveProgress();
-        }
+        transitionToCard(currentCardIndex - 1);
+        saveProgress();
       }
+    }
+
+    // Fungsi untuk memicu animasi konfeti
+    function triggerConfetti() {
+      if (!myConfetti) return;
+      myConfetti({
+        particleCount: 150,
+        spread: 90,
+        origin: { y: 0.6 },
+      });
+      // Hentikan setelah beberapa detik
+      setTimeout(() => myConfetti.reset(), 4000);
     }
 
     function nextCard() {
       if (learningMode !== "bebas" || currentFlashcards.length === 0) return;
 
+      // Cek apakah ini kartu terakhir SEBELUM menambah sessionProgress
       if (sessionProgress >= originalFlashcards.length) {
+        triggerConfetti(); // Panggil konfeti
         clearProgress();
-        window.location.href = "../index.html";
+        // Tunda sedikit sebelum pindah halaman agar animasi terlihat
+        setTimeout(() => {
+          window.location.href = "../index.html";
+        }, 1000);
       } else {
         sessionProgress++;
-        transitionToCard(currentCardIndex + 1);
+        const nextIndexInCurrent =
+          (currentCardIndex + 1) % currentFlashcards.length;
+        transitionToCard(nextIndexInCurrent);
         saveProgress();
       }
     }
@@ -281,31 +332,40 @@ document.addEventListener("DOMContentLoaded", () => {
     function checkTestRound() {
       if (currentCardIndex + 1 >= currentFlashcards.length) {
         if (wrongPile.length > 0) {
-          showModal(
-            `Putaran selesai. Anda masih salah ${wrongPile.length} kartu. Mulai putaran baru?`,
-            () => {
-              currentFlashcards = [...wrongPile];
-              wrongPile = [];
-              currentCardIndex = 0;
-              correctAnswers = 0;
-              totalCardCount = currentFlashcards.length;
-              if (isShuffled) shuffleArray(currentFlashcards);
-              saveProgress();
-              transitionToCard(0);
-            },
-            () => {
-              window.location.href = "../index.html";
-            }
-          );
+          // Tunda sedikit sebelum menampilkan modal
+          setTimeout(() => {
+            showModal(
+              `Putaran selesai. Anda masih salah ${wrongPile.length} kartu. Mulai putaran baru dengan kartu yang salah?`,
+              () => {
+                currentFlashcards = [...wrongPile];
+                wrongPile = [];
+                currentCardIndex = 0;
+                correctAnswers = 0;
+                totalCardCount = currentFlashcards.length;
+                currentFlashcards.forEach((c) => (c.answered = null));
+                if (isShuffled) shuffleArray(currentFlashcards);
+                saveProgress();
+                transitionToCard(0);
+              },
+              () => {
+                clearProgress();
+                window.location.href = "../index.html";
+              }
+            );
+          }, 500); // Tunda 0.5 detik
         } else {
+          triggerConfetti(); // Panggil konfeti jika benar semua
           clearProgress();
-          showModal(
-            "Sesi Tes Selesai! Anda Benar Semua.",
-            () => {
-              window.location.href = "../index.html";
-            },
-            null
-          );
+          // Tunda modal "Selesai"
+          setTimeout(() => {
+            showModal(
+              "Sesi Tes Selesai! Anda Benar Semua.",
+              () => {
+                window.location.href = "../index.html";
+              },
+              null
+            );
+          }, 500); // Tunda 0.5 detik
         }
         return true;
       }
@@ -315,32 +375,52 @@ document.addEventListener("DOMContentLoaded", () => {
     function handleCorrect() {
       if (learningMode !== "test" || currentFlashcards.length === 0) return;
 
-      if (currentFlashcards[currentCardIndex].answered !== "correct") {
-        currentFlashcards[currentCardIndex].answered = "correct";
+      const currentCardData = currentFlashcards[currentCardIndex];
+
+      if (currentCardData.answered !== "correct") {
+        currentCardData.answered = "correct";
         correctAnswers++;
+        const wrongIndex = wrongPile.findIndex(
+          (c) => c.front === currentCardData.front
+        );
+        if (wrongIndex > -1) {
+          wrongPile.splice(wrongIndex, 1);
+        }
       }
+
+      updateCounter();
       saveProgress();
-      if (checkTestRound()) return;
+      // Pindahkan checkTestRound() setelah transisi agar tidak terlalu cepat
+      // if (checkTestRound()) return;
       transitionToCard(currentCardIndex + 1);
+      // Cek setelah transisi dimulai (beri sedikit jeda)
+      setTimeout(() => {
+        checkTestRound();
+      }, 400); // Sesuaikan timing jika perlu
     }
 
     function handleWrong() {
       if (learningMode !== "test" || currentFlashcards.length === 0) return;
       const cardData = currentFlashcards[currentCardIndex];
 
+      if (cardData.answered === "correct") {
+        correctAnswers--;
+      }
       cardData.answered = "wrong";
 
       if (!wrongPile.find((c) => c.front === cardData.front)) {
         wrongPile.push({ ...cardData });
       }
 
-      if (currentFlashcards[currentCardIndex].answered === "correct") {
-        correctAnswers--;
-      }
-
+      updateCounter();
       saveProgress();
-      if (checkTestRound()) return;
+      // Pindahkan checkTestRound() setelah transisi
+      // if (checkTestRound()) return;
       transitionToCard(currentCardIndex + 1);
+      // Cek setelah transisi dimulai
+      setTimeout(() => {
+        checkTestRound();
+      }, 400);
     }
 
     function handleThemeToggle() {
@@ -389,9 +469,12 @@ document.addEventListener("DOMContentLoaded", () => {
         if (learningMode === "test" || isShuffled) {
           shuffleArray(currentFlashcards);
         }
+      } else {
+        const progress = JSON.parse(localStorage.getItem(storageKey) || "{}");
+        totalCardCount = progress.totalCardCount || currentFlashcards.length;
       }
 
-      if (progresDimuat && !totalCardCount) {
+      if (!totalCardCount) {
         totalCardCount = currentFlashcards.length;
       }
 
