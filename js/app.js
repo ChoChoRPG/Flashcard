@@ -438,7 +438,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (sessionProgress >= originalFlashcards.length) {
         triggerConfetti(); // Panggil konfeti
         clearProgress();
-        // Tunda sedikit sebelum pindah halaman agar animasi terlihat
+        // Tunda sedikit sebelum pindah halaman agar terlihat
         setTimeout(() => {
           window.location.href = "../index.html";
         }, 1000);
@@ -593,9 +593,24 @@ document.addEventListener("DOMContentLoaded", () => {
         ttsButton.style.display = "none";
       }
 
+      // --- MODIFIKASI: Tambahkan "priming" call ---
+      let isFirstTtsClick = true; // Lacak klik pertama
+
       ttsButton.addEventListener("click", () => {
         isTtsEnabled = !isTtsEnabled;
         ttsButton.classList.toggle("active", isTtsEnabled);
+
+        // "Nudge" atau "Priming" untuk browser mobile
+        // Panggil getVoices() sekali saat tombol diaktifkan pertama kali.
+        // Ini bisa "membangunkan" browser untuk memuat semua daftar suara.
+        if (isTtsEnabled && isFirstTtsClick && synth) {
+          console.log(
+            "TTS diaktifkan pertama kali, mencoba 'membangunkan' daftar suara..."
+          );
+          synth.getVoices(); // Panggilan ini untuk "membangunkan"
+          isFirstTtsClick = false; // Hanya lakukan sekali
+        }
+        // --- AKHIR MODIFIKASI ---
 
         // Jika TTS dinonaktifkan, hentikan suara yang sedang diputar
         if (!isTtsEnabled && synth.speaking) {
