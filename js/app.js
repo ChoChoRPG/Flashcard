@@ -69,6 +69,13 @@ document.addEventListener("DOMContentLoaded", () => {
       ? confetti.create(confettiCanvas, { resize: true })
       : null;
 
+    // ================== VARIABEL TTS BARU ==================
+    const ttsButton = document.getElementById("tts-button");
+    let isTtsEnabled = false;
+    const synth = window.speechSynthesis;
+    let voices = [];
+    // ================== AKHIR VARIABEL TTS =================
+
     let originalFlashcards = [];
     let currentFlashcards = [];
     let wrongPile = [];
@@ -78,6 +85,73 @@ document.addEventListener("DOMContentLoaded", () => {
     let totalCardCount = 0;
     let isFlipped = false;
     let isShuffled = false;
+
+    // ================== FUNGSI TTS BARU ==================
+    /**
+     * Mengambil daftar suara yang tersedia di browser.
+     */
+    function populateVoiceList() {
+      if (typeof synth === "undefined") {
+        console.error("Speech Synthesis API tidak didukung.");
+        if (ttsButton) ttsButton.style.display = "none"; // Sembunyikan tombol jika tidak didukung
+        return;
+      }
+      voices = synth.getVoices();
+      // console.log("Voices loaded:", voices); // Untuk debug
+    }
+
+    /**
+     * Membacakan teks yang diberikan menggunakan suara Jepang.
+     * @param {string} text - Teks yang akan dibacakan.
+     */
+    function speak(text) {
+      if (!synth || !text) return;
+
+      if (synth.speaking) {
+        synth.cancel(); // Hentikan jika sedang berbicara
+      }
+
+      const utterThis = new SpeechSynthesisUtterance(text);
+
+      utterThis.onend = () => {
+        // console.log("Speech finished.");
+      };
+
+      utterThis.onerror = (e) => {
+        console.error("SpeechSynthesisUtterance.onerror", e);
+      };
+
+      // Cari suara Jepang (ja-JP)
+      let japaneseVoice = voices.find((voice) => voice.lang === "ja-JP");
+
+      // Fallback jika tidak ada suara ja-JP spesifik, cari yang depannya "ja"
+      if (!japaneseVoice) {
+        japaneseVoice = voices.find((voice) => voice.lang.startsWith("ja"));
+      }
+
+      if (japaneseVoice) {
+        utterThis.voice = japaneseVoice;
+        // console.log("Using voice:", japaneseVoice.name); // Untuk debug
+      } else {
+        // Jika tidak ada suara Jepang, setidaknya setel bahasa
+        // browser mungkin akan mencoba mencari defaultnya
+        utterThis.lang = "ja-JP";
+        console.warn(
+          "Suara ja-JP tidak ditemukan, menggunakan default browser."
+        );
+      }
+
+      utterThis.pitch = 1;
+      utterThis.rate = 0.8; // Kecepatan normal adalah 1, dibuat sedikit lebih lambat
+      synth.speak(utterThis);
+    }
+
+    // Panggil fungsi untuk mengisi daftar suara
+    populateVoiceList();
+    if (synth && synth.onvoiceschanged !== undefined) {
+      synth.onvoiceschanged = populateVoiceList;
+    }
+    // ================== AKHIR FUNGSI TTS =================
 
     if (typeof dataString === "undefined" || dataString.trim() === "") {
       cardFront.textContent = "Data kosong atau tidak valid.";
@@ -100,7 +174,17 @@ document.addEventListener("DOMContentLoaded", () => {
           definition = definition.substring(1, definition.length - 1);
         }
         const backHTML = `<div class="hiragana">${hiragana}</div><div class="definition">${definition}</div><div class="level">${level}</div>`;
-        originalFlashcards.push({ front, back: backHTML, answered: null });
+
+        // --- MODIFIKASI ---
+        // Simpan juga definisi mentah dan hiragana untuk TTS
+        originalFlashcards.push({
+          front,
+          back: backHTML,
+          hiragana: hiragana,
+          definition: definition,
+          answered: null,
+        });
+        // --- AKHIR MODIFIKASI ---
       } catch (e) {
         console.error("Gagal mem-parsing baris:", line, e);
       }
@@ -250,15 +334,46 @@ document.addEventListener("DOMContentLoaded", () => {
       saveProgress();
     }
 
+    /**
+     * Membalik kartu dan memicu TTS jika aktif.
+     */
     function flipCard() {
-      if (currentFlashcards.length > 0) {
-        isFlipped = !isFlipped;
-        card.classList.toggle("is-flipped");
+      if (currentFlashcards.length === 0) return;
+
+      isFlipped = !isFlipped;
+      card.classList.toggle("is-flipped");
+
+      // --- LOGIKA TTS DIMODIFIKASI ---
+      if (isFlipped && isTtsEnabled && synth) {
+        // Jika kartu dibalik ke belakang DAN TTS aktif
+        const cardData = currentFlashcards[currentCardIndex];
+        // --- MODIFIKASI: Ganti cardData.definition menjadi cardData.hiragana ---
+        if (cardData && cardData.hiragana) {
+          // Beri jeda sedikit agar animasi flip terlihat selesai
+          setTimeout(() => {
+            speak(cardData.hiragana); // Ucapkan teks hiragana
+          }, 300); // 300ms
+        }
+        // --- AKHIR MODIFIKASI ---
+      } else if (!isFlipped && synth) {
+        // Jika kartu dibalik ke depan, hentikan audio
+        synth.cancel();
       }
+      // --- AKHIR LOGIKA TTS ---
     }
 
+    /**
+     * Transisi ke kartu baru, hentikan TTS yang sedang berjalan.
+     */
     function transitionToCard(newIndex) {
       if (appContainer.classList.contains("is-changing")) return;
+
+      // --- LOGIKA TTS BARU ---
+      // Hentikan audio yang sedang berjalan sebelum ganti kartu
+      if (synth && synth.speaking) {
+        synth.cancel();
+      }
+      // --- AKHIR LOGIKA TTS ---
 
       const flipFirst = isFlipped;
 
@@ -428,6 +543,8 @@ document.addEventListener("DOMContentLoaded", () => {
       localStorage.setItem("theme", isDarkMode ? "dark" : "light");
     }
 
+    // --- EVENT LISTENERS ---
+
     document.addEventListener("keydown", (e) => {
       if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key))
         e.preventDefault();
@@ -461,6 +578,22 @@ document.addEventListener("DOMContentLoaded", () => {
     if (wrongButtonSVG) wrongButtonSVG.addEventListener("click", handleWrong);
     if (shuffleButtonTest)
       shuffleButtonTest.addEventListener("click", toggleShuffle);
+
+    // --- EVENT LISTENER TOMBOL TTS BARU ---
+    if (ttsButton) {
+      ttsButton.addEventListener("click", () => {
+        if (!synth) return; // Jangan lakukan apa-apa jika API tidak didukung
+
+        isTtsEnabled = !isTtsEnabled;
+        ttsButton.classList.toggle("active", isTtsEnabled);
+
+        // Jika TTS dinonaktifkan, hentikan suara yang sedang diputar
+        if (!isTtsEnabled && synth.speaking) {
+          synth.cancel();
+        }
+      });
+    }
+    // --- AKHIR EVENT LISTENER ---
 
     loadProgress((progresDimuat) => {
       if (!progresDimuat) {
