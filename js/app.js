@@ -73,7 +73,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const ttsButton = document.getElementById("tts-button");
     let isTtsEnabled = false;
     const synth = window.speechSynthesis;
-    let voices = [];
+    // --- DIHAPUS --- Variabel 'voices' global dihapus untuk mencegah race condition
     // ================== AKHIR VARIABEL TTS =================
 
     let originalFlashcards = [];
@@ -87,25 +87,22 @@ document.addEventListener("DOMContentLoaded", () => {
     let isShuffled = false;
 
     // ================== FUNGSI TTS BARU ==================
-    /**
-     * Mengambil daftar suara yang tersedia di browser.
-     */
-    function populateVoiceList() {
-      if (typeof synth === "undefined") {
-        console.error("Speech Synthesis API tidak didukung.");
-        if (ttsButton) ttsButton.style.display = "none"; // Sembunyikan tombol jika tidak didukung
-        return;
-      }
-      voices = synth.getVoices();
-      // console.log("Voices loaded:", voices); // Untuk debug
-    }
+
+    // --- DIHAPUS --- Fungsi populateVoiceList() dihapus
+    // Kita akan mengambil suara langsung di dalam fungsi speak()
 
     /**
      * Membacakan teks yang diberikan menggunakan suara Jepang.
      * @param {string} text - Teks yang akan dibacakan.
      */
     function speak(text) {
-      if (!synth || !text) return;
+      if (typeof synth === "undefined" || !synth || !text) {
+        if (typeof synth === "undefined") {
+          console.error("Speech Synthesis API tidak didukung.");
+          if (ttsButton) ttsButton.style.display = "none";
+        }
+        return;
+      }
 
       if (synth.speaking) {
         synth.cancel(); // Hentikan jika sedang berbicara
@@ -121,12 +118,23 @@ document.addEventListener("DOMContentLoaded", () => {
         console.error("SpeechSynthesisUtterance.onerror", e);
       };
 
+      // --- PERUBAHAN UTAMA ---
+      // Ambil daftar suara SETIAP KALI fungsi speak dipanggil.
+      // Ini jauh lebih aman untuk browser mobile yang memuat suara secara asinkron.
+      const allVoices = synth.getVoices();
+
+      if (allVoices.length === 0) {
+        console.warn(
+          "Daftar suara (getVoices) masih kosong. TTS mungkin gagal atau salah logat."
+        );
+      }
+
       // Cari suara Jepang (ja-JP)
-      let japaneseVoice = voices.find((voice) => voice.lang === "ja-JP");
+      let japaneseVoice = allVoices.find((voice) => voice.lang === "ja-JP");
 
       // Fallback jika tidak ada suara ja-JP spesifik, cari yang depannya "ja"
       if (!japaneseVoice) {
-        japaneseVoice = voices.find((voice) => voice.lang.startsWith("ja"));
+        japaneseVoice = allVoices.find((voice) => voice.lang.startsWith("ja"));
       }
 
       if (japaneseVoice) {
@@ -137,26 +145,25 @@ document.addEventListener("DOMContentLoaded", () => {
         // browser mungkin akan mencoba mencari defaultnya
         utterThis.lang = "ja-JP";
         console.warn(
-          "Suara ja-JP tidak ditemukan, menggunakan default browser."
+          "Suara ja-JP tidak ditemukan. Menggunakan default browser (ini mungkin penyebab logat salah)."
         );
       }
+      // --- AKHIR PERUBAHAN UTAMA ---
 
       utterThis.pitch = 1;
       utterThis.rate = 0.8; // Kecepatan normal adalah 1, dibuat sedikit lebih lambat
       synth.speak(utterThis);
     }
 
-    // Panggil fungsi untuk mengisi daftar suara
-    populateVoiceList();
-    if (synth && synth.onvoiceschanged !== undefined) {
-      synth.onvoiceschanged = populateVoiceList;
-    }
+    // --- DIHAPUS --- Panggilan ke populateVoiceList() dan onvoiceschanged dihapus
+
     // ================== AKHIR FUNGSI TTS =================
 
     if (typeof dataString === "undefined" || dataString.trim() === "") {
       cardFront.textContent = "Data kosong atau tidak valid.";
       return;
     }
+    // ... (sisa kode sama persis) ...
     const lines = dataString.trim().split("\n");
     for (const line of lines) {
       if (line.trim() === "" || line.startsWith(";")) continue;
@@ -581,9 +588,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // --- EVENT LISTENER TOMBOL TTS BARU ---
     if (ttsButton) {
-      ttsButton.addEventListener("click", () => {
-        if (!synth) return; // Jangan lakukan apa-apa jika API tidak didukung
+      // Cek dukungan sekali di awal
+      if (typeof synth === "undefined") {
+        ttsButton.style.display = "none";
+      }
 
+      ttsButton.addEventListener("click", () => {
         isTtsEnabled = !isTtsEnabled;
         ttsButton.classList.toggle("active", isTtsEnabled);
 
