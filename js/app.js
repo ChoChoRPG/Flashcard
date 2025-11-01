@@ -1,73 +1,123 @@
 document.addEventListener("DOMContentLoaded", () => {
   const urlParams = new URLSearchParams(window.location.search);
+  // Ambil parameter 'bab', bisa berisi "N5_1" atau "N5_1,N5_3,N4_1"
   const babIdsParam = urlParams.get("bab");
   const learningMode = urlParams.get("mode") || "bebas";
 
-  if (!babIdsParam) {
+  // Ubah parameter string menjadi array ID
+  const babIds = babIdsParam ? babIdsParam.split(",").filter(Boolean) : [];
+
+  if (!babIds || babIds.length === 0) {
     document.getElementById("card-front").textContent = "Bab tidak ditemukan.";
     console.error("Parameter 'bab' tidak ada di URL.");
     return;
   }
 
-  const babIds = babIdsParam.split(",");
-  const storageKey = `flashcardProgress_bab${babIds.join(
-    "_"
-  )}_mode${learningMode}`;
+  // Buat key unik untuk localStorage berdasarkan bab yang dipilih & diurutkan
+  // Ini memastikan progres disimpan untuk "N5_1,N5_2" dan "N5_2,N5_1" di tempat yang sama
+  const sortedBabKey = babIds.sort().join("_");
+  const storageKey = `flashcardProgress_babs${sortedBabKey}_mode${learningMode}`;
 
-  async function loadDataString(babId) {
-    const url = `../js/Data${babId}.js`;
+  /**
+   * --- LOGIKA LOADING BARU DENGAN FETCH ---
+   * Memuat satu file data menggunakan fetch dan mengekstrak dataString.
+   * @param {string} babId - ID Bab (misal "N5_1")
+   * @returns {Promise<string>} - Promise yang resolve dengan dataString dari file
+   */
+  async function loadSingleDataScript(babId) {
     try {
-      const response = await fetch(url);
+      // Path ../js/ adalah relatif dari /sesi/sesi.html
+      const response = await fetch(`../js/Data${babId}.js`);
       if (!response.ok) {
-        throw new Error(`Gagal memuat ${url}: ${response.statusText}`);
+        throw new Error(
+          `Gagal memuat Data${babId}.js (status: ${response.status})`
+        );
       }
       const scriptText = await response.text();
-      const dataStringMatch = scriptText.match(
-        /var dataString\s*=\s*`([^`]*)`/
-      );
-      if (dataStringMatch && dataStringMatch[1]) {
-        console.log(`Data${babId}.js berhasil di-fetch dan di-parse.`);
-        return dataStringMatch[1];
+
+      // Periksa apakah scriptText itu kosong
+      if (!scriptText || scriptText.trim() === "") {
+        console.warn(`Data${babId}.js kosong.`);
+        return ""; // Kembalikan string kosong agar join tidak gagal
+      }
+
+      // Trik untuk mengekstrak 'dataString' tanpa 'eval()' penuh
+      // Ini mengeksekusi "var dataString = '...';" dan mengembalikan 'dataString'
+      const data = new Function(
+        scriptText +
+          '; return typeof dataString !== "undefined" ? dataString : undefined;'
+      )();
+
+      if (typeof data !== "undefined") {
+        console.log(`Data${babId}.js loaded and parsed successfully.`);
+        return data;
       } else {
-        throw new Error(`Tidak ditemukan dataString di ${url}`);
+        // Ini error jika file JS ada, tapi tidak mendefinisikan 'dataString'
+        throw new Error(
+          `dataString tidak terdefinisi di dalam Data${babId}.js`
+        );
       }
     } catch (error) {
+      console.error(`Error di loadSingleDataScript untuk ${babId}:`, error);
+      // Lempar error lagi agar bisa ditangkap oleh Promise.all
+      throw new Error(`Gagal memproses Data${babId}.js: ${error.message}`);
+    }
+  }
+
+  /**
+   * Memuat semua script data secara PARALEL (lebih cepat) menggunakan Fetch.
+   * @param {string[]} babIds - Array ID bab
+   * @param {function(string)} onCompleteCallback - Callback saat semua data digabung
+   * @param {function(Error)} onErrorCallback - Callback jika ada error
+   */
+  async function loadAllDataScripts(
+    babIds,
+    onCompleteCallback,
+    onErrorCallback
+  ) {
+    try {
+      // Buat array berisi SEMUA promise (fetch)
+      const allPromises = babIds.map((babId) => loadSingleDataScript(babId));
+
+      // Tunggu SEMUA promise selesai secara paralel
+      // Ini jauh lebih cepat daripada loop sekuensial
+      const allDataStrings = await Promise.all(allPromises);
+
+      // Gabungkan hasilnya (file yang kosong akan jadi string kosong, tidak masalah)
+      onCompleteCallback(allDataStrings.join("\n"));
+    } catch (error) {
+      // Jika SATU saja gagal, Promise.all akan reject
+      onErrorCallback(error);
+    }
+  }
+  // --- AKHIR LOGIKA LOADING BARU ---
+
+  // Panggil loadAllDataScripts
+  loadAllDataScripts(
+    babIds,
+    (combinedData) => {
+      // Semua data berhasil dimuat dan digabung
+      // Set dataString global yang akan digunakan oleh initializeApp
+      window.dataString = combinedData;
+      initializeApp(); // Jalankan aplikasi
+    },
+    (error) => {
+      // Terjadi error saat memuat salah satu file
       console.error(error);
-      throw error;
+      document.getElementById("card-front").textContent = error.message;
     }
-  }
+  );
 
-  async function loadAllData() {
-    let combinedDataString = "";
-    const cardFront = document.getElementById("card-front");
-    let hasError = false;
-
-    for (const babId of babIds) {
-      try {
-        const dataString = await loadDataString(babId);
-        if (dataString.trim() !== "") {
-          combinedDataString += dataString + "\n";
-        } else {
-          console.warn(`Data string kosong di Data${babId}.js`);
-        }
-      } catch (error) {
-        console.error(`Gagal memuat data untuk Bab ${babId}:`, error);
-        cardFront.textContent = `Gagal memuat Bab ${babId}.`;
-        hasError = true;
-        break;
-      }
+  // --- Fungsi Inisialisasi Aplikasi Utama ---
+  // (Fungsi ini sekarang hanya akan dipanggil SETELAH semua data dimuat)
+  function initializeApp() {
+    // dataString sekarang ada di window.dataString (di-set oleh callback loadAllDataScripts)
+    // Ini berisi data gabungan dari semua bab yang dipilih
+    if (typeof dataString === "undefined" || dataString.trim() === "") {
+      cardFront.textContent = "Data kosong atau tidak valid.";
+      return;
     }
 
-    if (!hasError && combinedDataString.trim() !== "") {
-      initializeApp(combinedDataString);
-    } else if (!hasError) {
-      cardFront.textContent = "Data kosong.";
-    }
-  }
-
-  loadAllData();
-
-  function initializeApp(dataString) {
     document.body.classList.add("mode-" + learningMode);
 
     const appContainer = document.getElementById("app");
@@ -92,15 +142,18 @@ document.addEventListener("DOMContentLoaded", () => {
     const modalButtonYes = document.getElementById("modal-button-yes");
     const modalButtonNo = document.getElementById("modal-button-no");
 
+    // Dapatkan elemen canvas konfeti
     const confettiCanvas = document.getElementById("confetti-canvas");
     const myConfetti = confettiCanvas
       ? confetti.create(confettiCanvas, { resize: true })
       : null;
 
+    // ================== VARIABEL TTS ==================
     const ttsButton = document.getElementById("tts-button");
     let isTtsEnabled = false;
     const synth = window.speechSynthesis;
-    let isFirstTtsClick = true;
+    let isFirstTtsClick = true; // Untuk "membangunkan" suara di mobile
+    // ================== AKHIR VARIABEL TTS =================
 
     let originalFlashcards = [];
     let currentFlashcards = [];
@@ -112,6 +165,11 @@ document.addEventListener("DOMContentLoaded", () => {
     let isFlipped = false;
     let isShuffled = false;
 
+    // ================== FUNGSI TTS ==================
+    /**
+     * Membacakan teks yang diberikan menggunakan suara Jepang.
+     * @param {string} text - Teks yang akan dibacakan.
+     */
     function speak(text) {
       if (typeof synth === "undefined" || !synth || !text) {
         if (typeof synth === "undefined") {
@@ -122,27 +180,32 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       if (synth.speaking) {
-        synth.cancel();
+        synth.cancel(); // Hentikan jika sedang berbicara
       }
 
       const utterThis = new SpeechSynthesisUtterance(text);
 
-      utterThis.onend = () => {};
+      utterThis.onend = () => {
+        // console.log("Speech finished.");
+      };
 
       utterThis.onerror = (e) => {
         console.error("SpeechSynthesisUtterance.onerror", e);
       };
 
+      // Ambil daftar suara SETIAP KALI fungsi speak dipanggil.
       const allVoices = synth.getVoices();
 
-      if (allVoices.length === 0 && isFirstTtsClick) {
+      if (allVoices.length === 0) {
         console.warn(
           "Daftar suara (getVoices) masih kosong. TTS mungkin gagal atau salah logat."
         );
       }
 
+      // Cari suara Jepang (ja-JP)
       let japaneseVoice = allVoices.find((voice) => voice.lang === "ja-JP");
 
+      // Fallback jika tidak ada suara ja-JP spesifik, cari yang depannya "ja"
       if (!japaneseVoice) {
         japaneseVoice = allVoices.find((voice) => voice.lang.startsWith("ja"));
       }
@@ -150,22 +213,20 @@ document.addEventListener("DOMContentLoaded", () => {
       if (japaneseVoice) {
         utterThis.voice = japaneseVoice;
       } else {
+        // Jika tidak ada suara Jepang, setidaknya setel bahasa
         utterThis.lang = "ja-JP";
-        if (isFirstTtsClick)
-          console.warn(
-            "Suara ja-JP tidak ditemukan. Menggunakan default browser."
-          );
+        console.warn(
+          "Suara ja-JP tidak ditemukan. Menggunakan default browser (ini mungkin penyebab logat salah)."
+        );
       }
 
       utterThis.pitch = 1;
-      utterThis.rate = 0.8;
+      utterThis.rate = 0.8; // Kecepatan normal adalah 1, dibuat sedikit lebih lambat
       synth.speak(utterThis);
     }
+    // ================== AKHIR FUNGSI TTS =================
 
-    if (typeof dataString === "undefined" || dataString.trim() === "") {
-      cardFront.textContent = "Data kosong atau tidak valid.";
-      return;
-    }
+    // Parsing data gabungan
     const lines = dataString.trim().split("\n");
     for (const line of lines) {
       if (line.trim() === "" || line.startsWith(";")) continue;
@@ -184,6 +245,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         const backHTML = `<div class="hiragana">${hiragana}</div><div class="definition">${definition}</div><div class="level">${level}</div>`;
 
+        // Simpan juga definisi mentah dan hiragana untuk TTS
         originalFlashcards.push({
           front,
           back: backHTML,
@@ -247,6 +309,7 @@ document.addEventListener("DOMContentLoaded", () => {
           totalCardCount: totalCardCount,
           isShuffled: isShuffled,
         };
+        // Gunakan storageKey unik yang sudah dibuat
         localStorage.setItem(storageKey, JSON.stringify(progress));
       } catch (e) {
         console.error("Gagal menyimpan progres ke localStorage:", e);
@@ -254,35 +317,31 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function clearProgress() {
+   
       localStorage.removeItem(storageKey);
     }
 
     function loadProgress(onProgressLoaded) {
+      
       const savedData = localStorage.getItem(storageKey);
       if (savedData) {
         showModal(
           "Ditemukan sesi terakhir yang belum selesai. Lanjutkan?",
           () => {
-            try {
-              const progress = JSON.parse(savedData);
-              currentFlashcards = progress.currentFlashcards;
-              wrongPile = progress.wrongPile;
-              currentCardIndex = progress.currentCardIndex;
-              sessionProgress = progress.sessionProgress;
-              correctAnswers = progress.correctAnswers;
-              totalCardCount =
-                progress.totalCardCount || originalFlashcards.length;
-              isShuffled = progress.isShuffled;
-              if (shuffleButtonBebas)
-                shuffleButtonBebas.classList.toggle("active", isShuffled);
-              if (shuffleButtonTest)
-                shuffleButtonTest.classList.toggle("active", isShuffled);
-              onProgressLoaded(true);
-            } catch (e) {
-              console.error("Gagal memuat progres:", e);
-              clearProgress();
-              onProgressLoaded(false);
-            }
+            const progress = JSON.parse(savedData);
+            currentFlashcards = progress.currentFlashcards;
+            wrongPile = progress.wrongPile;
+            currentCardIndex = progress.currentCardIndex;
+            sessionProgress = progress.sessionProgress;
+            correctAnswers = progress.correctAnswers;
+            totalCardCount =
+              progress.totalCardCount || originalFlashcards.length;
+            isShuffled = progress.isShuffled;
+            if (shuffleButtonBebas)
+              shuffleButtonBebas.classList.toggle("active", isShuffled);
+            if (shuffleButtonTest)
+              shuffleButtonTest.classList.toggle("active", isShuffled);
+            onProgressLoaded(true);
           },
           () => {
             clearProgress();
@@ -303,8 +362,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function updateCounter() {
       if (learningMode === "bebas") {
+      
         cardCounter.textContent = `${sessionProgress} / ${originalFlashcards.length}`;
       } else {
+     
         cardCounter.textContent = `${currentCardIndex + 1} / ${
           currentFlashcards.length
         }`;
@@ -337,6 +398,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         transitionToCard(0);
       } else {
+       
         currentFlashcards = [...originalFlashcards];
         if (learningMode === "bebas") {
           sessionProgress = 1;
@@ -346,27 +408,35 @@ document.addEventListener("DOMContentLoaded", () => {
       saveProgress();
     }
 
+   
     function flipCard() {
       if (currentFlashcards.length === 0) return;
 
       isFlipped = !isFlipped;
       card.classList.toggle("is-flipped");
 
+     
       if (isFlipped && isTtsEnabled && synth) {
+       
         const cardData = currentFlashcards[currentCardIndex];
         if (cardData && cardData.hiragana) {
+          
           setTimeout(() => {
-            speak(cardData.hiragana);
-          }, 300);
+            speak(cardData.hiragana); 
+          }, 300); 
         }
       } else if (!isFlipped && synth) {
+        
         synth.cancel();
       }
+     
     }
 
+    
     function transitionToCard(newIndex) {
       if (appContainer.classList.contains("is-changing")) return;
 
+      
       if (synth && synth.speaking) {
         synth.cancel();
       }
@@ -408,6 +478,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
+    
     function triggerConfetti() {
       if (!myConfetti) return;
       myConfetti({
@@ -415,15 +486,18 @@ document.addEventListener("DOMContentLoaded", () => {
         spread: 90,
         origin: { y: 0.6 },
       });
+      
       setTimeout(() => myConfetti.reset(), 4000);
     }
 
     function nextCard() {
       if (learningMode !== "bebas" || currentFlashcards.length === 0) return;
 
+      
       if (sessionProgress >= originalFlashcards.length) {
         triggerConfetti();
         clearProgress();
+    
         setTimeout(() => {
           window.location.href = "../index.html";
         }, 1000);
@@ -439,6 +513,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function checkTestRound() {
       if (currentCardIndex + 1 >= currentFlashcards.length) {
         if (wrongPile.length > 0) {
+          
           setTimeout(() => {
             showModal(
               `Putaran selesai. Anda masih salah ${wrongPile.length} kartu. Mulai putaran baru dengan kartu yang salah?`,
@@ -458,10 +533,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 window.location.href = "../index.html";
               }
             );
-          }, 500);
+          }, 500); 
         } else {
-          triggerConfetti();
+          triggerConfetti(); 
           clearProgress();
+          
           setTimeout(() => {
             showModal(
               "Sesi Tes Selesai! Anda Benar Semua.",
@@ -470,7 +546,7 @@ document.addEventListener("DOMContentLoaded", () => {
               },
               null
             );
-          }, 500);
+          }, 500); 
         }
         return true;
       }
@@ -495,10 +571,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
       updateCounter();
       saveProgress();
+      
       transitionToCard(currentCardIndex + 1);
+      
       setTimeout(() => {
         checkTestRound();
-      }, 400);
+      }, 400); 
     }
 
     function handleWrong() {
@@ -516,7 +594,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
       updateCounter();
       saveProgress();
+      
       transitionToCard(currentCardIndex + 1);
+      
       setTimeout(() => {
         checkTestRound();
       }, 400);
@@ -526,6 +606,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const isDarkMode = document.body.classList.toggle("dark-mode");
       localStorage.setItem("theme", isDarkMode ? "dark" : "light");
     }
+
+   
 
     document.addEventListener("keydown", (e) => {
       if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key))
@@ -545,7 +627,9 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     if (card) card.addEventListener("click", flipCard);
+
     if (themeToggle) themeToggle.addEventListener("click", handleThemeToggle);
+
     if (prevButtonSVG) prevButtonSVG.addEventListener("click", prevCard);
     if (nextButtonSVG) nextButtonSVG.addEventListener("click", nextCard);
     if (shuffleButtonBebas)
@@ -559,7 +643,9 @@ document.addEventListener("DOMContentLoaded", () => {
     if (shuffleButtonTest)
       shuffleButtonTest.addEventListener("click", toggleShuffle);
 
+    
     if (ttsButton) {
+      
       if (typeof synth === "undefined") {
         ttsButton.style.display = "none";
       }
@@ -568,16 +654,22 @@ document.addEventListener("DOMContentLoaded", () => {
         isTtsEnabled = !isTtsEnabled;
         ttsButton.classList.toggle("active", isTtsEnabled);
 
+        
         if (isTtsEnabled && isFirstTtsClick && synth) {
+          console.log(
+            "TTS diaktifkan pertama kali, mencoba 'membangunkan' daftar suara..."
+          );
           synth.getVoices();
-          isFirstTtsClick = false;
+          isFirstTtsClick = false; 
         }
 
+       
         if (!isTtsEnabled && synth.speaking) {
           synth.cancel();
         }
       });
     }
+    
 
     loadProgress((progresDimuat) => {
       if (!progresDimuat) {
@@ -589,6 +681,7 @@ document.addEventListener("DOMContentLoaded", () => {
       } else {
         const progress = JSON.parse(localStorage.getItem(storageKey) || "{}");
         totalCardCount = progress.totalCardCount || currentFlashcards.length;
+        
       }
 
       if (!totalCardCount) {
