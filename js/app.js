@@ -158,6 +158,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let originalFlashcards = [];
     let currentFlashcards = [];
     let wrongPile = [];
+    let wrongAnswerLog = {}; // <-- VARIABEL BARU UNTUK MELACAK FREKUENSI
     let currentCardIndex = 0;
     let sessionProgress = 1;
     let correctAnswers = 0;
@@ -227,8 +228,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // ================== AKHIR FUNGSI TTS =================
 
     // Parsing data gabungan
-    const lines = dataString.trim().split("\n");
-    for (const line of lines) {
+    for (const line of dataString.trim().split("\n")) {
       if (line.trim() === "" || line.startsWith(";")) continue;
       try {
         const parts = line.split(",");
@@ -250,7 +250,7 @@ document.addEventListener("DOMContentLoaded", () => {
           front,
           back: backHTML,
           hiragana: hiragana,
-          definition: definition,
+          definition: definition, // <-- Simpan definisi mentah
           answered: null,
         });
       } catch (e) {
@@ -298,6 +298,53 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
+    /**
+     * FUNGSI BARU: Menampilkan rekap sesi tes
+     * @param {object} log - Objek wrongAnswerLog
+     */
+    function showTestRecap(log) {
+      const appContainer = document.getElementById("app");
+      const recapContainer = document.getElementById("recap-container");
+      const recapTableBody = document.getElementById("recap-table-body");
+      const headerControls = document.querySelector(".header-controls");
+
+      const logEntries = Object.values(log);
+
+      // Jika tidak ada kesalahan, tampilkan modal sukses biasa dan redirect
+      if (logEntries.length === 0) {
+        showModal(
+          "Sesi Tes Selesai! Anda Benar Semua.",
+          () => {
+            window.location.href = "../index.html";
+          },
+          null // Tidak ada tombol "Tidak"
+        );
+        return;
+      }
+
+      // 1. Sembunyikan UI utama
+      if (appContainer) appContainer.style.display = "none";
+      if (headerControls) headerControls.style.display = "none";
+
+      // 2. Siapkan data tabel
+      logEntries.sort((a, b) => b.count - a.count); // Urutkan berdasarkan frekuensi (terbanyak dulu)
+      recapTableBody.innerHTML = ""; // Kosongkan isi tabel sebelumnya
+
+      logEntries.forEach((entry, index) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${index + 1}</td>
+          <td>${entry.card.front}</td>
+          <td>${entry.card.definition}</td>
+          <td>${entry.count}</td>
+        `;
+        recapTableBody.appendChild(row);
+      });
+
+      // 3. Tampilkan UI Rekap
+      if (recapContainer) recapContainer.style.display = "block";
+    }
+
     function saveProgress() {
       try {
         const progress = {
@@ -308,6 +355,7 @@ document.addEventListener("DOMContentLoaded", () => {
           correctAnswers: correctAnswers,
           totalCardCount: totalCardCount,
           isShuffled: isShuffled,
+          wrongAnswerLog: wrongAnswerLog, // <-- SIMPAN LOG
         };
         // Gunakan storageKey unik yang sudah dibuat
         localStorage.setItem(storageKey, JSON.stringify(progress));
@@ -317,12 +365,11 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function clearProgress() {
-   
       localStorage.removeItem(storageKey);
+      wrongAnswerLog = {}; // <-- RESET LOG SAAT PROGRES DIHAPUS
     }
 
     function loadProgress(onProgressLoaded) {
-      
       const savedData = localStorage.getItem(storageKey);
       if (savedData) {
         showModal(
@@ -337,6 +384,7 @@ document.addEventListener("DOMContentLoaded", () => {
             totalCardCount =
               progress.totalCardCount || originalFlashcards.length;
             isShuffled = progress.isShuffled;
+            wrongAnswerLog = progress.wrongAnswerLog || {}; // <-- LOAD LOG
             if (shuffleButtonBebas)
               shuffleButtonBebas.classList.toggle("active", isShuffled);
             if (shuffleButtonTest)
@@ -344,7 +392,7 @@ document.addEventListener("DOMContentLoaded", () => {
             onProgressLoaded(true);
           },
           () => {
-            clearProgress();
+            clearProgress(); // Ini akan me-reset wrongAnswerLog juga
             onProgressLoaded(false);
           }
         );
@@ -362,10 +410,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function updateCounter() {
       if (learningMode === "bebas") {
-      
         cardCounter.textContent = `${sessionProgress} / ${originalFlashcards.length}`;
       } else {
-     
         cardCounter.textContent = `${currentCardIndex + 1} / ${
           currentFlashcards.length
         }`;
@@ -398,7 +444,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         transitionToCard(0);
       } else {
-       
         currentFlashcards = [...originalFlashcards];
         if (learningMode === "bebas") {
           sessionProgress = 1;
@@ -408,35 +453,27 @@ document.addEventListener("DOMContentLoaded", () => {
       saveProgress();
     }
 
-   
     function flipCard() {
       if (currentFlashcards.length === 0) return;
 
       isFlipped = !isFlipped;
       card.classList.toggle("is-flipped");
 
-     
       if (isFlipped && isTtsEnabled && synth) {
-       
         const cardData = currentFlashcards[currentCardIndex];
         if (cardData && cardData.hiragana) {
-          
           setTimeout(() => {
-            speak(cardData.hiragana); 
-          }, 300); 
+            speak(cardData.hiragana);
+          }, 300);
         }
       } else if (!isFlipped && synth) {
-        
         synth.cancel();
       }
-     
     }
 
-    
     function transitionToCard(newIndex) {
       if (appContainer.classList.contains("is-changing")) return;
 
-      
       if (synth && synth.speaking) {
         synth.cancel();
       }
@@ -478,7 +515,6 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    
     function triggerConfetti() {
       if (!myConfetti) return;
       myConfetti({
@@ -486,18 +522,17 @@ document.addEventListener("DOMContentLoaded", () => {
         spread: 90,
         origin: { y: 0.6 },
       });
-      
+
       setTimeout(() => myConfetti.reset(), 4000);
     }
 
     function nextCard() {
       if (learningMode !== "bebas" || currentFlashcards.length === 0) return;
 
-      
       if (sessionProgress >= originalFlashcards.length) {
         triggerConfetti();
         clearProgress();
-    
+
         setTimeout(() => {
           window.location.href = "../index.html";
         }, 1000);
@@ -513,7 +548,6 @@ document.addEventListener("DOMContentLoaded", () => {
     function checkTestRound() {
       if (currentCardIndex + 1 >= currentFlashcards.length) {
         if (wrongPile.length > 0) {
-          
           setTimeout(() => {
             showModal(
               `Putaran selesai. Anda masih salah ${wrongPile.length} kartu. Mulai putaran baru dengan kartu yang salah?`,
@@ -533,20 +567,18 @@ document.addEventListener("DOMContentLoaded", () => {
                 window.location.href = "../index.html";
               }
             );
-          }, 500); 
+          }, 500);
         } else {
-          triggerConfetti(); 
-          clearProgress();
-          
+          // --- INI BAGIAN YANG DIPERBARUI ---
+          triggerConfetti();
+          const finalLog = { ...wrongAnswerLog }; // Salin log sebelum di-reset
+          clearProgress(); // Hapus progres dari storage
+
           setTimeout(() => {
-            showModal(
-              "Sesi Tes Selesai! Anda Benar Semua.",
-              () => {
-                window.location.href = "../index.html";
-              },
-              null
-            );
-          }, 500); 
+            // Panggil fungsi rekap baru
+            showTestRecap(finalLog);
+          }, 500);
+          // --- AKHIR BAGIAN YANG DIPERBARUI ---
         }
         return true;
       }
@@ -571,17 +603,26 @@ document.addEventListener("DOMContentLoaded", () => {
 
       updateCounter();
       saveProgress();
-      
+
       transitionToCard(currentCardIndex + 1);
-      
+
       setTimeout(() => {
         checkTestRound();
-      }, 400); 
+      }, 400);
     }
 
     function handleWrong() {
       if (learningMode !== "test" || currentFlashcards.length === 0) return;
       const cardData = currentFlashcards[currentCardIndex];
+
+      // --- LOGIKA PELACAKAN FREKUENSI BARU ---
+      const cardId = cardData.front; // Gunakan kanji sebagai ID unik
+      const currentCount = wrongAnswerLog[cardId]?.count || 0;
+      wrongAnswerLog[cardId] = {
+        count: currentCount + 1,
+        card: { ...cardData }, // Simpan salinan data kartu (termasuk definisi)
+      };
+      // --- AKHIR LOGIKA PELACAKAN ---
 
       if (cardData.answered === "correct") {
         correctAnswers--;
@@ -593,10 +634,10 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       updateCounter();
-      saveProgress();
-      
+      saveProgress(); // Simpan progres (termasuk wrongAnswerLog)
+
       transitionToCard(currentCardIndex + 1);
-      
+
       setTimeout(() => {
         checkTestRound();
       }, 400);
@@ -606,8 +647,6 @@ document.addEventListener("DOMContentLoaded", () => {
       const isDarkMode = document.body.classList.toggle("dark-mode");
       localStorage.setItem("theme", isDarkMode ? "dark" : "light");
     }
-
-   
 
     document.addEventListener("keydown", (e) => {
       if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key))
@@ -643,9 +682,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (shuffleButtonTest)
       shuffleButtonTest.addEventListener("click", toggleShuffle);
 
-    
     if (ttsButton) {
-      
       if (typeof synth === "undefined") {
         ttsButton.style.display = "none";
       }
@@ -654,22 +691,19 @@ document.addEventListener("DOMContentLoaded", () => {
         isTtsEnabled = !isTtsEnabled;
         ttsButton.classList.toggle("active", isTtsEnabled);
 
-        
         if (isTtsEnabled && isFirstTtsClick && synth) {
           console.log(
             "TTS diaktifkan pertama kali, mencoba 'membangunkan' daftar suara..."
           );
           synth.getVoices();
-          isFirstTtsClick = false; 
+          isFirstTmsClick = false;
         }
 
-       
         if (!isTtsEnabled && synth.speaking) {
           synth.cancel();
         }
       });
     }
-    
 
     loadProgress((progresDimuat) => {
       if (!progresDimuat) {
@@ -681,7 +715,6 @@ document.addEventListener("DOMContentLoaded", () => {
       } else {
         const progress = JSON.parse(localStorage.getItem(storageKey) || "{}");
         totalCardCount = progress.totalCardCount || currentFlashcards.length;
-        
       }
 
       if (!totalCardCount) {

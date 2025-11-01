@@ -19,6 +19,90 @@
             z-index: 1001;
             pointer-events: none;
         }
+
+        /* CSS BARU UNTUK REKAP */
+        #recap-container {
+            width: 100%;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background-color: var(--card-bg-color);
+            border-radius: 12px;
+            box-shadow: 0 4px 10px var(--shadow-color);
+            color: var(--text-color);
+            text-align: center;
+        }
+        #recap-container h2 {
+            font-size: 2rem;
+            color: var(--color-brand);
+            margin-bottom: 15px;
+        }
+        #recap-container p {
+            color: var(--text-subtle-color); 
+            margin-bottom: 25px;
+            font-size: 1.1rem;
+        }
+        .recap-table-wrapper {
+            overflow-x: auto;
+            max-height: 60vh;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+        #recap-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+        #recap-table th, #recap-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: middle;
+        }
+        #recap-table th {
+            background-color: var(--bg-color);
+            font-size: 1rem;
+            font-weight: 700;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        #recap-table td {
+            font-size: 0.95rem;
+        }
+        #recap-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+        #recap-table td:first-child, #recap-table th:first-child {
+            text-align: center;
+            width: 50px;
+        }
+         #recap-table td:last-child, #recap-table th:last-child {
+            text-align: center;
+            width: 100px;
+            font-weight: 700;
+        }
+        .recap-menu-btn {
+            font-family: 'Noto Sans JP', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 700;
+            background-color: var(--color-brand);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 0.8rem 1.5rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: 25px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .recap-menu-btn:hover {
+            background-color: var(--color-brand-hover);
+            transform: scale(1.03);
+        }
+        /* AKHIR CSS BARU */
+
     </style>
 </head>
 <body>
@@ -45,6 +129,7 @@
         </button>
     </div>
 
+    <!-- WADAH APLIKASI UTAMA -->
     <div id="app" class="app-container">
         <div class="card-scene-wrapper">
              <img src="../img/logo.svg" class="watermark-logo" alt="Logo Watermark">
@@ -91,7 +176,32 @@
             </div>
         </div>
     </div>
+    
+    <!-- WADAH REKAP BARU (HIDDEN BY DEFAULT) -->
+    <div id="recap-container" style="display: none;">
+        <h2>Rekap Sesi Tes</h2>
+        <p>
+            Kartu yang paling sering Anda salah, diurutkan dari yang paling sering.
+        </p>
+        <div class="recap-table-wrapper">
+            <table id="recap-table">
+                <thead>
+                    <tr>
+                        <th>No.</th>
+                        <th>Kanji</th>
+                        <th>Definisi</th>
+                        <th>Frekuensi</th>
+                    </tr>
+                </thead>
+                <tbody id="recap-table-body">
+                    <!-- Data akan diisi oleh JS -->
+                </tbody>
+            </table>
+        </div>
+        <a href="../index.html" class="recap-menu-btn">Kembali ke Menu</a>
+    </div>
 
+    <!-- MODAL POPUP -->
     <div id="custom-modal" class="modal-overlay" style="display: none;">
         <div class="modal-content">
             <p id="modal-text" style="font-size: 1.2rem; margin-bottom: 2rem;">Teks modal default</p>
@@ -194,9 +304,11 @@
             let programmaticClick = false;
 
             function updateAppPadding() {
-                if (controlsContainer && appContainer) {
+                if (controlsContainer && appContainer && appContainer.style.display !== 'none') {
                     const controlsHeight = controlsContainer.offsetHeight;
                     appContainer.style.setProperty('--controls-height', `${controlsHeight + 20}px`);
+                } else if (appContainer) {
+                     appContainer.style.setProperty('--controls-height', `0px`);
                 }
             }
             updateAppPadding();
@@ -307,8 +419,20 @@
                 updateAppPadding();
              });
              if(controlsContainer) resizeObserver.observe(controlsContainer);
+
+            
+             if(appContainer) {
+                 const appObserver = new MutationObserver((mutations) => {
+                     for(let mutation of mutations) {
+                         if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+                             updateAppPadding();
+                             break;
+                         }
+                     }
+                 });
+                 appObserver.observe(appContainer, { attributes: true });
+             }
         });
     </script>
 </body>
 </html>
-
