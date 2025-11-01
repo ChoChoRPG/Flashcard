@@ -1,44 +1,73 @@
 document.addEventListener("DOMContentLoaded", () => {
   const urlParams = new URLSearchParams(window.location.search);
-  const babId = urlParams.get("bab");
+  const babIdsParam = urlParams.get("bab");
   const learningMode = urlParams.get("mode") || "bebas";
 
-  if (!babId) {
+  if (!babIdsParam) {
     document.getElementById("card-front").textContent = "Bab tidak ditemukan.";
     console.error("Parameter 'bab' tidak ada di URL.");
     return;
   }
 
-  const storageKey = `flashcardProgress_bab${babId}_mode${learningMode}`;
+  const babIds = babIdsParam.split(",");
+  const storageKey = `flashcardProgress_bab${babIds.join(
+    "_"
+  )}_mode${learningMode}`;
 
-  function loadDataScript(callback) {
-    const script = document.createElement("script");
-    script.src = `../js/Data${babId}.js`;
-    script.onload = () => {
-      console.log(`Data${babId}.js loaded successfully.`);
-      if (typeof dataString !== "undefined") {
-        callback();
-      } else {
-        console.error(
-          `dataString tidak ditemukan setelah memuat Data${babId}.js`
-        );
-        document.getElementById(
-          "card-front"
-        ).textContent = `Data string kosong di Data${babId}.js`;
+  async function loadDataString(babId) {
+    const url = `../js/Data${babId}.js`;
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Gagal memuat ${url}: ${response.statusText}`);
       }
-    };
-    script.onerror = () => {
-      console.error(`Failed to load Data${babId}.js.`);
-      document.getElementById(
-        "card-front"
-      ).textContent = `Data untuk Bab ${babId} tidak ditemukan.`;
-    };
-    document.head.appendChild(script);
+      const scriptText = await response.text();
+      const dataStringMatch = scriptText.match(
+        /var dataString\s*=\s*`([^`]*)`/
+      );
+      if (dataStringMatch && dataStringMatch[1]) {
+        console.log(`Data${babId}.js berhasil di-fetch dan di-parse.`);
+        return dataStringMatch[1];
+      } else {
+        throw new Error(`Tidak ditemukan dataString di ${url}`);
+      }
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
   }
 
-  loadDataScript(initializeApp);
+  async function loadAllData() {
+    let combinedDataString = "";
+    const cardFront = document.getElementById("card-front");
+    let hasError = false;
 
-  function initializeApp() {
+    for (const babId of babIds) {
+      try {
+        const dataString = await loadDataString(babId);
+        if (dataString.trim() !== "") {
+          combinedDataString += dataString + "\n";
+        } else {
+          console.warn(`Data string kosong di Data${babId}.js`);
+        }
+      } catch (error) {
+        console.error(`Gagal memuat data untuk Bab ${babId}:`, error);
+        cardFront.textContent = `Gagal memuat Bab ${babId}.`;
+        hasError = true;
+        break;
+      }
+    }
+
+    if (!hasError && combinedDataString.trim() !== "") {
+      initializeApp(combinedDataString);
+    } else if (!hasError) {
+      cardFront.textContent = "Data kosong.";
+    }
+  }
+
+  loadAllData();
+
+  function initializeApp(dataString) {
     document.body.classList.add("mode-" + learningMode);
 
     const appContainer = document.getElementById("app");
@@ -63,18 +92,15 @@ document.addEventListener("DOMContentLoaded", () => {
     const modalButtonYes = document.getElementById("modal-button-yes");
     const modalButtonNo = document.getElementById("modal-button-no");
 
-    // Dapatkan elemen canvas konfeti
     const confettiCanvas = document.getElementById("confetti-canvas");
     const myConfetti = confettiCanvas
       ? confetti.create(confettiCanvas, { resize: true })
       : null;
 
-    // ================== VARIABEL TTS BARU ==================
     const ttsButton = document.getElementById("tts-button");
     let isTtsEnabled = false;
     const synth = window.speechSynthesis;
-    // --- DIHAPUS --- Variabel 'voices' global dihapus untuk mencegah race condition
-    // ================== AKHIR VARIABEL TTS =================
+    let isFirstTtsClick = true;
 
     let originalFlashcards = [];
     let currentFlashcards = [];
@@ -86,15 +112,6 @@ document.addEventListener("DOMContentLoaded", () => {
     let isFlipped = false;
     let isShuffled = false;
 
-    // ================== FUNGSI TTS BARU ==================
-
-    // --- DIHAPUS --- Fungsi populateVoiceList() dihapus
-    // Kita akan mengambil suara langsung di dalam fungsi speak()
-
-    /**
-     * Membacakan teks yang diberikan menggunakan suara Jepang.
-     * @param {string} text - Teks yang akan dibacakan.
-     */
     function speak(text) {
       if (typeof synth === "undefined" || !synth || !text) {
         if (typeof synth === "undefined") {
@@ -105,65 +122,50 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       if (synth.speaking) {
-        synth.cancel(); // Hentikan jika sedang berbicara
+        synth.cancel();
       }
 
       const utterThis = new SpeechSynthesisUtterance(text);
 
-      utterThis.onend = () => {
-        // console.log("Speech finished.");
-      };
+      utterThis.onend = () => {};
 
       utterThis.onerror = (e) => {
         console.error("SpeechSynthesisUtterance.onerror", e);
       };
 
-      // --- PERUBAHAN UTAMA ---
-      // Ambil daftar suara SETIAP KALI fungsi speak dipanggil.
-      // Ini jauh lebih aman untuk browser mobile yang memuat suara secara asinkron.
       const allVoices = synth.getVoices();
 
-      if (allVoices.length === 0) {
+      if (allVoices.length === 0 && isFirstTtsClick) {
         console.warn(
           "Daftar suara (getVoices) masih kosong. TTS mungkin gagal atau salah logat."
         );
       }
 
-      // Cari suara Jepang (ja-JP)
       let japaneseVoice = allVoices.find((voice) => voice.lang === "ja-JP");
 
-      // Fallback jika tidak ada suara ja-JP spesifik, cari yang depannya "ja"
       if (!japaneseVoice) {
         japaneseVoice = allVoices.find((voice) => voice.lang.startsWith("ja"));
       }
 
       if (japaneseVoice) {
         utterThis.voice = japaneseVoice;
-        // console.log("Using voice:", japaneseVoice.name); // Untuk debug
       } else {
-        // Jika tidak ada suara Jepang, setidaknya setel bahasa
-        // browser mungkin akan mencoba mencari defaultnya
         utterThis.lang = "ja-JP";
-        console.warn(
-          "Suara ja-JP tidak ditemukan. Menggunakan default browser (ini mungkin penyebab logat salah)."
-        );
+        if (isFirstTtsClick)
+          console.warn(
+            "Suara ja-JP tidak ditemukan. Menggunakan default browser."
+          );
       }
-      // --- AKHIR PERUBAHAN UTAMA ---
 
       utterThis.pitch = 1;
-      utterThis.rate = 0.8; // Kecepatan normal adalah 1, dibuat sedikit lebih lambat
+      utterThis.rate = 0.8;
       synth.speak(utterThis);
     }
-
-    // --- DIHAPUS --- Panggilan ke populateVoiceList() dan onvoiceschanged dihapus
-
-    // ================== AKHIR FUNGSI TTS =================
 
     if (typeof dataString === "undefined" || dataString.trim() === "") {
       cardFront.textContent = "Data kosong atau tidak valid.";
       return;
     }
-    // ... (sisa kode sama persis) ...
     const lines = dataString.trim().split("\n");
     for (const line of lines) {
       if (line.trim() === "" || line.startsWith(";")) continue;
@@ -182,8 +184,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         const backHTML = `<div class="hiragana">${hiragana}</div><div class="definition">${definition}</div><div class="level">${level}</div>`;
 
-        // --- MODIFIKASI ---
-        // Simpan juga definisi mentah dan hiragana untuk TTS
         originalFlashcards.push({
           front,
           back: backHTML,
@@ -191,7 +191,6 @@ document.addEventListener("DOMContentLoaded", () => {
           definition: definition,
           answered: null,
         });
-        // --- AKHIR MODIFIKASI ---
       } catch (e) {
         console.error("Gagal mem-parsing baris:", line, e);
       }
@@ -264,20 +263,26 @@ document.addEventListener("DOMContentLoaded", () => {
         showModal(
           "Ditemukan sesi terakhir yang belum selesai. Lanjutkan?",
           () => {
-            const progress = JSON.parse(savedData);
-            currentFlashcards = progress.currentFlashcards;
-            wrongPile = progress.wrongPile;
-            currentCardIndex = progress.currentCardIndex;
-            sessionProgress = progress.sessionProgress;
-            correctAnswers = progress.correctAnswers;
-            totalCardCount =
-              progress.totalCardCount || originalFlashcards.length;
-            isShuffled = progress.isShuffled;
-            if (shuffleButtonBebas)
-              shuffleButtonBebas.classList.toggle("active", isShuffled);
-            if (shuffleButtonTest)
-              shuffleButtonTest.classList.toggle("active", isShuffled);
-            onProgressLoaded(true);
+            try {
+              const progress = JSON.parse(savedData);
+              currentFlashcards = progress.currentFlashcards;
+              wrongPile = progress.wrongPile;
+              currentCardIndex = progress.currentCardIndex;
+              sessionProgress = progress.sessionProgress;
+              correctAnswers = progress.correctAnswers;
+              totalCardCount =
+                progress.totalCardCount || originalFlashcards.length;
+              isShuffled = progress.isShuffled;
+              if (shuffleButtonBebas)
+                shuffleButtonBebas.classList.toggle("active", isShuffled);
+              if (shuffleButtonTest)
+                shuffleButtonTest.classList.toggle("active", isShuffled);
+              onProgressLoaded(true);
+            } catch (e) {
+              console.error("Gagal memuat progres:", e);
+              clearProgress();
+              onProgressLoaded(false);
+            }
           },
           () => {
             clearProgress();
@@ -341,46 +346,30 @@ document.addEventListener("DOMContentLoaded", () => {
       saveProgress();
     }
 
-    /**
-     * Membalik kartu dan memicu TTS jika aktif.
-     */
     function flipCard() {
       if (currentFlashcards.length === 0) return;
 
       isFlipped = !isFlipped;
       card.classList.toggle("is-flipped");
 
-      // --- LOGIKA TTS DIMODIFIKASI ---
       if (isFlipped && isTtsEnabled && synth) {
-        // Jika kartu dibalik ke belakang DAN TTS aktif
         const cardData = currentFlashcards[currentCardIndex];
-        // --- MODIFIKASI: Ganti cardData.definition menjadi cardData.hiragana ---
         if (cardData && cardData.hiragana) {
-          // Beri jeda sedikit agar animasi flip terlihat selesai
           setTimeout(() => {
-            speak(cardData.hiragana); // Ucapkan teks hiragana
-          }, 300); // 300ms
+            speak(cardData.hiragana);
+          }, 300);
         }
-        // --- AKHIR MODIFIKASI ---
       } else if (!isFlipped && synth) {
-        // Jika kartu dibalik ke depan, hentikan audio
         synth.cancel();
       }
-      // --- AKHIR LOGIKA TTS ---
     }
 
-    /**
-     * Transisi ke kartu baru, hentikan TTS yang sedang berjalan.
-     */
     function transitionToCard(newIndex) {
       if (appContainer.classList.contains("is-changing")) return;
 
-      // --- LOGIKA TTS BARU ---
-      // Hentikan audio yang sedang berjalan sebelum ganti kartu
       if (synth && synth.speaking) {
         synth.cancel();
       }
-      // --- AKHIR LOGIKA TTS ---
 
       const flipFirst = isFlipped;
 
@@ -419,7 +408,6 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    // Fungsi untuk memicu animasi konfeti
     function triggerConfetti() {
       if (!myConfetti) return;
       myConfetti({
@@ -427,18 +415,15 @@ document.addEventListener("DOMContentLoaded", () => {
         spread: 90,
         origin: { y: 0.6 },
       });
-      // Hentikan setelah beberapa detik
       setTimeout(() => myConfetti.reset(), 4000);
     }
 
     function nextCard() {
       if (learningMode !== "bebas" || currentFlashcards.length === 0) return;
 
-      // Cek apakah ini kartu terakhir SEBELUM menambah sessionProgress
       if (sessionProgress >= originalFlashcards.length) {
-        triggerConfetti(); // Panggil konfeti
+        triggerConfetti();
         clearProgress();
-        // Tunda sedikit sebelum pindah halaman agar terlihat
         setTimeout(() => {
           window.location.href = "../index.html";
         }, 1000);
@@ -454,7 +439,6 @@ document.addEventListener("DOMContentLoaded", () => {
     function checkTestRound() {
       if (currentCardIndex + 1 >= currentFlashcards.length) {
         if (wrongPile.length > 0) {
-          // Tunda sedikit sebelum menampilkan modal
           setTimeout(() => {
             showModal(
               `Putaran selesai. Anda masih salah ${wrongPile.length} kartu. Mulai putaran baru dengan kartu yang salah?`,
@@ -474,11 +458,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 window.location.href = "../index.html";
               }
             );
-          }, 500); // Tunda 0.5 detik
+          }, 500);
         } else {
-          triggerConfetti(); // Panggil konfeti jika benar semua
+          triggerConfetti();
           clearProgress();
-          // Tunda modal "Selesai"
           setTimeout(() => {
             showModal(
               "Sesi Tes Selesai! Anda Benar Semua.",
@@ -487,7 +470,7 @@ document.addEventListener("DOMContentLoaded", () => {
               },
               null
             );
-          }, 500); // Tunda 0.5 detik
+          }, 500);
         }
         return true;
       }
@@ -512,13 +495,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
       updateCounter();
       saveProgress();
-      // Pindahkan checkTestRound() setelah transisi agar tidak terlalu cepat
-      // if (checkTestRound()) return;
       transitionToCard(currentCardIndex + 1);
-      // Cek setelah transisi dimulai (beri sedikit jeda)
       setTimeout(() => {
         checkTestRound();
-      }, 400); // Sesuaikan timing jika perlu
+      }, 400);
     }
 
     function handleWrong() {
@@ -536,10 +516,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       updateCounter();
       saveProgress();
-      // Pindahkan checkTestRound() setelah transisi
-      // if (checkTestRound()) return;
       transitionToCard(currentCardIndex + 1);
-      // Cek setelah transisi dimulai
       setTimeout(() => {
         checkTestRound();
       }, 400);
@@ -549,8 +526,6 @@ document.addEventListener("DOMContentLoaded", () => {
       const isDarkMode = document.body.classList.toggle("dark-mode");
       localStorage.setItem("theme", isDarkMode ? "dark" : "light");
     }
-
-    // --- EVENT LISTENERS ---
 
     document.addEventListener("keydown", (e) => {
       if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key))
@@ -570,9 +545,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     if (card) card.addEventListener("click", flipCard);
-
     if (themeToggle) themeToggle.addEventListener("click", handleThemeToggle);
-
     if (prevButtonSVG) prevButtonSVG.addEventListener("click", prevCard);
     if (nextButtonSVG) nextButtonSVG.addEventListener("click", nextCard);
     if (shuffleButtonBebas)
@@ -586,39 +559,25 @@ document.addEventListener("DOMContentLoaded", () => {
     if (shuffleButtonTest)
       shuffleButtonTest.addEventListener("click", toggleShuffle);
 
-    // --- EVENT LISTENER TOMBOL TTS BARU ---
     if (ttsButton) {
-      // Cek dukungan sekali di awal
       if (typeof synth === "undefined") {
         ttsButton.style.display = "none";
       }
-
-      // --- MODIFIKASI: Tambahkan "priming" call ---
-      let isFirstTtsClick = true; // Lacak klik pertama
 
       ttsButton.addEventListener("click", () => {
         isTtsEnabled = !isTtsEnabled;
         ttsButton.classList.toggle("active", isTtsEnabled);
 
-        // "Nudge" atau "Priming" untuk browser mobile
-        // Panggil getVoices() sekali saat tombol diaktifkan pertama kali.
-        // Ini bisa "membangunkan" browser untuk memuat semua daftar suara.
         if (isTtsEnabled && isFirstTtsClick && synth) {
-          console.log(
-            "TTS diaktifkan pertama kali, mencoba 'membangunkan' daftar suara..."
-          );
-          synth.getVoices(); // Panggilan ini untuk "membangunkan"
-          isFirstTtsClick = false; // Hanya lakukan sekali
+          synth.getVoices();
+          isFirstTtsClick = false;
         }
-        // --- AKHIR MODIFIKASI ---
 
-        // Jika TTS dinonaktifkan, hentikan suara yang sedang diputar
         if (!isTtsEnabled && synth.speaking) {
           synth.cancel();
         }
       });
     }
-    // --- AKHIR EVENT LISTENER ---
 
     loadProgress((progresDimuat) => {
       if (!progresDimuat) {

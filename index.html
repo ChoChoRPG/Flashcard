@@ -6,11 +6,9 @@
     <title>Chotoba - Menu Utama</title>
     <link rel="stylesheet" href="style.css">
     <link rel="icon" href="img/logos.svg" type="image/svg+xml">
-
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
-
 </head>
 <body class="menu-page">
 
@@ -29,13 +27,35 @@
             <img src="img/sun.svg" alt="Light Mode" class="icon-sun">
             <img src="img/moon.svg" alt="Dark Mode" class="icon-moon">
          </button>
+         
+         <div class="contact-fab-container">
+            <button class="contact-fab" id="contact-fab-btn" title="Kontak">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-message-square"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+            </button>
+            <div class="contact-menu" id="contact-menu">
+                <div class="contact-section">
+                    <p class="contact-description">Jika menemukan jawaban tidak sesuai, masalah, bug, dan pertanyaan bisa contact dibawah ini:</p>
+                    <div class="contact-icons">
+                        <a href="https://wa.me/6289602907872?text=Halo%2C%20saya%20ingin%20bertanya%20lebih%20lanjut." target="_blank" title="WhatsApp"><img src="img/wa.svg" alt="WhatsApp"></a>
+                        <a href="mailto:chochorpg.g@gmail.com" target="_blank" title="Email"><img src="img/email.svg" alt="Email"></a>
+                        <a href="https://discord.com/users/386071452157476874" target="_blank" title="Discord"><img src="img/discord.svg" alt="Discord"></a>
+                    </div>
+                </div>
+                <div class="contact-section">
+                    <p class="contact-description">Jika Anda merasa konten ini bermanfaat dan ingin mendukung saya untuk terus berkarya, donasi sekecil apa pun akan sangat berarti.</p>
+                    <div class="contact-icons">
+                       <a href="https://sociabuzz.com/chochorpg" target="_blank" title="Donasi"><img src="img/donate.svg" alt="Donasi"></a>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
 
     <div class="menu-container">
         <img src="img/logo.svg" class="watermark-logo-menu" alt="Logo Watermark">
         <br><br>
-        <p class="subtitle">Pilih level dan bab untuk memulai latihan.</p>
+        <p class="subtitle">Pilih satu atau beberapa bab untuk memulai latihan.</p>
 
         <div class="category-list">
 
@@ -198,32 +218,18 @@
         </div>
     </div>
 
-    <div class="contact-fab-container">
-        <button class="contact-fab" id="contact-fab-btn" title="Kontak">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-message-square"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-        </button>
-        <div class="contact-menu" id="contact-menu">
-            <div class="contact-section">
-                <p class="contact-description">Jika menemukan jawaban tidak sesuai, masalah, bug, dan pertanyaan bisa contact dibawah ini:</p>
-                <div class="contact-icons">
-                    <a href="https://wa.me/6289602907872?text=Halo%2C%20saya%20ingin%20bertanya%20lebih%20lanjut." target="_blank" title="WhatsApp"><img src="img/wa.svg" alt="WhatsApp"></a>
-                    <a href="mailto:chochorpg.g@gmail.com" target="_blank" title="Email"><img src="img/email.svg" alt="Email"></a>
-                    <a href="https://discord.com/users/386071452157476874" target="_blank" title="Discord"><img src="img/discord.svg" alt="Discord"></a>
-
-                </div>
-            </div>
-            <div class="contact-section">
-                <p class="contact-description">Jika Anda merasa konten ini bermanfaat dan ingin mendukung saya untuk terus berkarya, donasi sekecil apa pun akan sangat berarti.</p>
-                <div class="contact-icons">
-                   <a href="https://sociabuzz.com/chochorpg" target="_blank" title="Donasi"><img src="img/donate.svg" alt="Donasi"></a>
-                </div>
-            </div>
+    <div class="selection-bar" id="selection-bar" style="display: none;">
+        <div class="selection-info">
+            <span id="selection-count">0</span> bab dipilih
         </div>
+        <button class="selection-start-btn" id="selection-start-btn">
+            Mulai Belajar
+        </button>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-
+            
             const themeToggleButton = document.getElementById('theme-toggle-btn');
             if(themeToggleButton) {
                 themeToggleButton.addEventListener('click', () => {
@@ -234,7 +240,6 @@
 
             const allCategoryItems = document.querySelectorAll('.category-list .category-item');
             const allCategoryHeaders = document.querySelectorAll('.category-list .category-header');
-
             allCategoryHeaders.forEach(header => {
                 header.addEventListener('click', () => {
                     const item = header.parentElement;
@@ -276,23 +281,51 @@
                 }
              });
 
-
             const modal = document.getElementById('mode-modal');
             const modalClose = document.getElementById('modal-close');
             const modeBebasBtn = document.getElementById('mode-bebas');
             const modeTestBtn = document.getElementById('mode-test');
-            const presetLinks = document.querySelectorAll('.category-item .chapter-link');
-            let targetBab = '';
+            const chapterLinks = document.querySelectorAll('.chapter-link');
+            const selectionBar = document.getElementById('selection-bar');
+            const selectionCount = document.getElementById('selection-count');
+            const selectionStartBtn = document.getElementById('selection-start-btn');
+            
+            let selectedBabs = []; 
 
-
-            presetLinks.forEach(link => {
+            chapterLinks.forEach(link => {
                 link.addEventListener('click', (e) => {
                     e.preventDefault();
-                    targetBab = link.getAttribute('data-bab');
-                    if(modal) modal.style.display = 'flex';
+                    const babId = link.getAttribute('data-bab');
+                    
+                    if (selectedBabs.includes(babId)) {
+                        selectedBabs = selectedBabs.filter(id => id !== babId);
+                        link.classList.remove('selected');
+                    } else {
+                        selectedBabs.push(babId);
+                        link.classList.add('selected');
+                    }
+                    
+                    updateSelectionBar();
                 });
             });
 
+            function updateSelectionBar() {
+                const count = selectedBabs.length;
+                if (count > 0) {
+                    selectionCount.textContent = count;
+                    selectionBar.style.display = 'flex';
+                } else {
+                    selectionBar.style.display = 'none';
+                }
+            }
+
+            if (selectionStartBtn) {
+                selectionStartBtn.addEventListener('click', () => {
+                    if (selectedBabs.length > 0) {
+                        if(modal) modal.style.display = 'flex';
+                    }
+                });
+            }
 
             function closeModal() {
                 if(modal) modal.style.display = 'none';
@@ -304,12 +337,14 @@
             });
 
             if(modeBebasBtn) modeBebasBtn.addEventListener('click', () => {
-                 let url = `sesi/sesi.html?mode=bebas&bab=${targetBab}`;
+                 const babParam = selectedBabs.join(',');
+                 let url = `sesi/sesi.html?mode=bebas&bab=${babParam}`;
                  window.location.href = url;
             });
 
             if(modeTestBtn) modeTestBtn.addEventListener('click', () => {
-                 let url = `sesi/sesi.html?mode=test&bab=${targetBab}`;
+                 const babParam = selectedBabs.join(',');
+                 let url = `sesi/sesi.html?mode=test&bab=${babParam}`;
                  window.location.href = url;
             });
 
@@ -318,12 +353,15 @@
 
             if(contactFab && contactMenu) {
                 contactFab.addEventListener('click', (e) => {
-                    e.stopPropagation();
+                    e.stopPropagation(); 
                     contactMenu.classList.toggle('show-menu');
                 });
 
                 document.addEventListener('click', (e) => {
-                    if (contactMenu.classList.contains('show-menu') && !contactMenu.contains(e.target) && e.target !== contactFab) {
+                    if (contactMenu.classList.contains('show-menu') && 
+                        !contactMenu.contains(e.target) && 
+                        !contactFab.contains(e.target)) {
+                        
                         contactMenu.classList.remove('show-menu');
                     }
                 });

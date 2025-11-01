@@ -10,15 +10,14 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        /* CSS untuk canvas konfeti */
         #confetti-canvas {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            z-index: 1001; /* Di atas segalanya kecuali modal */
-            pointer-events: none; /* Agar tidak menghalangi klik */
+            z-index: 1001;
+            pointer-events: none;
         }
     </style>
 </head>
@@ -34,18 +33,17 @@
       })();
     </script>
 
-    <!-- Canvas untuk Konfeti -->
     <canvas id="confetti-canvas"></canvas>
 
-    <a href="../index.html" class="nav-btn-svg" id="back-to-menu-btn" title="Kembali ke Menu">
-        <img src="../img/left.svg" alt="Menu Utama">
-    </a>
-
-    <button class="theme-toggle-btn" id="theme-toggle-btn" title="Ganti Tema">
-        <img src="../img/sun.svg" alt="Light Mode" class="icon-sun">
-        <img src="../img/moon.svg" alt="Dark Mode" class="icon-moon">
-    </button>
-
+    <div class="header-controls">
+        <a href="../index.html" class="nav-btn-svg" id="back-to-menu-btn" title="Kembali ke Menu">
+            <img src="../img/left.svg" alt="Menu Utama">
+        </a>
+        <button class="theme-toggle-btn" id="theme-toggle-btn" title="Ganti Tema">
+            <img src="../img/sun.svg" alt="Light Mode" class="icon-sun">
+            <img src="../img/moon.svg" alt="Dark Mode" class="icon-moon">
+        </button>
+    </div>
 
     <div id="app" class="app-container">
         <div class="card-scene-wrapper">
@@ -73,9 +71,7 @@
             <div class="button-bar controls-bebas">
                 <div id="prev-button-svg" class="nav-btn-svg"><img src="../img/left.svg" alt="Sebelumnya"></div>
                 <div id="shuffle-button-bebas" class="shuffle-btn"><img src="../img/acak.svg" alt="Acak Kartu"></div>
-                <!-- ================== TOMBOL TTS BARU ================== -->
                 <div id="tts-button" class="nav-btn-svg" title="Aktifkan Audio"><img src="../img/audio.svg" alt="Audio TTS"></div>
-                <!-- ================== AKHIR TOMBOL TTS ================= -->
                 <div id="auto-play-button" class="nav-btn-svg"><img src="../img/otomatis.svg" alt="Otomatis"></div>
                 <div id="next-button-svg" class="nav-btn-svg"><img src="../img/right.svg" alt="Selanjutnya"></div>
             </div>
@@ -106,30 +102,7 @@
         </div>
     </div>
 
-     <div class="contact-fab-container">
-        <button class="contact-fab" id="contact-fab-btn" title="Kontak">
-             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-message-square"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-        </button>
-        <div class="contact-menu" id="contact-menu">
-            <div class="contact-section">
-                <p class="contact-description">Jika menemukan jawaban tidak sesuai, masalah, bug, dan pertanyaan bisa contact dibawah ini:</p>
-                <div class="contact-icons">
-                    <a href="https://wa.me/6289602907872?text=Halo%2C%20saya%20ingin%20bertanya%20lebih%20lanjut." target="_blank" title="WhatsApp"><img src="../img/wa.svg" alt="WhatsApp"></a>
-                    <a href="mailto:chochorpg.g@gmail.com" target="_blank" title="Email"><img src="../img/email.svg" alt="Email"></a>
-                    <a href="https://discord.com/users/386071452157476874" target="_blank" title="Discord"><img src="../img/discord.svg" alt="Discord"></a>
-                </div>
-            </div>
-            <div class="contact-section">
-                <p class="contact-description">Jika Anda merasa konten ini bermanfaat dan ingin mendukung saya untuk terus berkarya, donasi sekecil apa pun akan sangat berarti.</p>
-                <div class="contact-icons">
-                    <a href="https://sociabuzz.com/chochorpg" target="_blank" title="Donasi"><img src="../img/donate.svg" alt="Donasi"></a>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <script src="../js/app.js"></script>
-    <!-- Script Library Confetti -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 
     <script>
@@ -315,10 +288,8 @@
                 shuffleButtonBebas.addEventListener('click', stopAutoPlay);
              }
              
-             // Dapatkan tombol TTS baru
              const ttsButton = document.getElementById('tts-button');
              if (ttsButton) {
-                 // Menekan tombol TTS juga akan menghentikan auto-play
                  ttsButton.addEventListener('click', stopAutoPlay);
              }
 
@@ -336,24 +307,8 @@
                 updateAppPadding();
              });
              if(controlsContainer) resizeObserver.observe(controlsContainer);
-
-             const contactFab = document.getElementById('contact-fab-btn');
-             const contactMenu = document.getElementById('contact-menu');
-
-             if(contactFab && contactMenu) {
-                 contactFab.addEventListener('click', (e) => {
-                     e.stopPropagation();
-                     contactMenu.classList.toggle('show-menu');
-                 });
-
-                 document.addEventListener('click', (e) => {
-                     if (contactMenu.classList.contains('show-menu') && !contactMenu.contains(e.target) && e.target !== contactFab) {
-                         contactMenu.classList.remove('show-menu');
-                     }
-                 });
-             }
-
         });
     </script>
 </body>
 </html>
+
