@@ -149,7 +149,6 @@ document.addEventListener("DOMContentLoaded", () => {
       : null;
 
     // ================== VARIABEL TTS ==================
-    const ttsButton = document.getElementById("tts-button");
     let isTtsEnabled = false;
     const synth = window.speechSynthesis;
     let isFirstTtsClick = true; // Untuk "membangunkan" suara di mobile
@@ -175,7 +174,11 @@ document.addEventListener("DOMContentLoaded", () => {
       if (typeof synth === "undefined" || !synth || !text) {
         if (typeof synth === "undefined") {
           console.error("Speech Synthesis API tidak didukung.");
-          if (ttsButton) ttsButton.style.display = "none";
+          // Nonaktifkan kedua tombol jika API tidak ada
+          const ttsBtnBebas = document.getElementById("tts-button-bebas");
+          const ttsBtnTest = document.getElementById("tts-button-test");
+          if (ttsBtnBebas) ttsBtnBebas.style.display = "none";
+          if (ttsBtnTest) ttsBtnTest.style.display = "none";
         }
         return;
       }
@@ -431,25 +434,81 @@ document.addEventListener("DOMContentLoaded", () => {
       updateCounter();
     }
 
+    /**
+     * DIUBAH TOTAL: Fungsi ini sekarang menjadi toggle ON/OFF
+     * Saat ON: Mengacak sisa kartu
+     * Saat OFF: Mengurutkan sisa kartu
+     */
     function toggleShuffle() {
-      isShuffled = !isShuffled;
+      isShuffled = !isShuffled; // Toggle status
+
+      // Update UI tombol
       if (shuffleButtonBebas)
         shuffleButtonBebas.classList.toggle("active", isShuffled);
       if (shuffleButtonTest)
         shuffleButtonTest.classList.toggle("active", isShuffled);
-      if (isShuffled) {
-        shuffleArray(currentFlashcards);
-        if (learningMode === "bebas") {
-          sessionProgress = 1;
-        }
-        transitionToCard(0);
-      } else {
-        currentFlashcards = [...originalFlashcards];
-        if (learningMode === "bebas") {
-          sessionProgress = 1;
-        }
-        transitionToCard(0);
+
+      // Ambil kartu yang sudah dilihat (termasuk yang sekarang)
+      const seenCards = currentFlashcards.slice(0, currentCardIndex + 1);
+
+      // Ambil kartu yang tersisa
+      let remainingCards = currentFlashcards.slice(currentCardIndex + 1);
+
+      // Jika sisa kartu kurang dari 2, tidak ada yang perlu diacak/diurutkan
+      if (remainingCards.length < 2) {
+        saveProgress(); // Cukup simpan status isShuffled yang baru
+        return;
       }
+
+      if (isShuffled) {
+        // --- PENGGUNA BARU MENYALAKAN ACAN ---
+        // Acak HANYA kartu yang tersisa
+        shuffleArray(remainingCards);
+
+        // Gabungkan kembali array: kartu lama + sisa kartu yang sudah teracak
+        currentFlashcards = seenCards.concat(remainingCards);
+
+        // Beri umpan balik visual
+        if (cardScene) {
+          cardScene.style.transform = "scale(1.05)";
+          setTimeout(() => {
+            cardScene.style.transform = "scale(1)";
+          }, 150);
+        }
+      } else {
+        // --- PENGGUNA BARU MEMATIKAN ACAN ---
+        // Kita perlu mengurutkan 'remainingCards' kembali ke urutan aslinya.
+
+        // 1. Buat Peta (Map) untuk urutan asli agar pencarian cepat
+        //    Kita hanya perlu melakukan ini sekali jika belum ada
+        if (!window.originalOrderMap) {
+          window.originalOrderMap = new Map();
+          originalFlashcards.forEach((card, index) => {
+            // Gunakan 'front' (Kanji) sebagai ID unik
+            window.originalOrderMap.set(card.front, index);
+          });
+        }
+
+        // 2. Urutkan 'remainingCards' berdasarkan posisi aslinya di 'originalOrderMap'
+        remainingCards.sort((a, b) => {
+          const orderA = window.originalOrderMap.get(a.front);
+          const orderB = window.originalOrderMap.get(b.front);
+          return orderA - orderB;
+        });
+
+        // 3. Gabungkan kembali array
+        currentFlashcards = seenCards.concat(remainingCards);
+
+        // Beri umpan balik visual
+        if (cardScene) {
+          cardScene.style.transform = "scale(0.95)";
+          setTimeout(() => {
+            cardScene.style.transform = "scale(1)";
+          }, 150);
+        }
+      }
+
+      // Simpan status baru dan urutan kartu yang baru
       saveProgress();
     }
 
@@ -558,6 +617,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 correctAnswers = 0;
                 totalCardCount = currentFlashcards.length;
                 currentFlashcards.forEach((c) => (c.answered = null));
+                // Acak kartu yang salah untuk putaran baru jika mode acak masih aktif
                 if (isShuffled) shuffleArray(currentFlashcards);
                 saveProgress();
                 transitionToCard(0);
@@ -648,6 +708,51 @@ document.addEventListener("DOMContentLoaded", () => {
       localStorage.setItem("theme", isDarkMode ? "dark" : "light");
     }
 
+    /**
+     * FUNGSI BARU: Menginisialisasi tombol TTS
+     * @param {HTMLElement} buttonElement - Elemen tombol (bisa bebas atau test)
+     */
+    function initializeTtsButton(buttonElement) {
+      if (!buttonElement) return;
+
+      if (typeof synth === "undefined") {
+        buttonElement.style.display = "none";
+        return;
+      }
+
+      // Sinkronkan tampilan tombol dengan status global saat di-load
+      buttonElement.classList.toggle("active", isTtsEnabled);
+
+      buttonElement.addEventListener("click", () => {
+        isTtsEnabled = !isTtsEnabled; // Toggle status global
+
+        // Update tampilan tombol INI
+        buttonElement.classList.toggle("active", isTtsEnabled);
+
+        // Update juga tombol pasangannya agar sinkron
+        const otherButtonId =
+          buttonElement.id === "tts-button-bebas"
+            ? "tts-button-test"
+            : "tts-button-bebas";
+        const otherButton = document.getElementById(otherButtonId);
+        if (otherButton) {
+          otherButton.classList.toggle("active", isTtsEnabled);
+        }
+
+        if (isTtsEnabled && isFirstTtsClick && synth) {
+          console.log(
+            "TTS diaktifkan pertama kali, mencoba 'membangunkan' daftar suara..."
+          );
+          synth.getVoices();
+          isFirstTtsClick = false;
+        }
+
+        if (!isTtsEnabled && synth.speaking) {
+          synth.cancel();
+        }
+      });
+    }
+
     document.addEventListener("keydown", (e) => {
       if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key))
         e.preventDefault();
@@ -669,10 +774,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (themeToggle) themeToggle.addEventListener("click", handleThemeToggle);
 
+    // --- INISIALISASI TTS BARU ---
+    // Temukan kedua tombol
+    const ttsButtonBebas = document.getElementById("tts-button-bebas");
+    const ttsButtonTest = document.getElementById("tts-button-test");
+    // Inisialisasi listener untuk keduanya
+    initializeTtsButton(ttsButtonBebas);
+    initializeTtsButton(ttsButtonTest);
+    // --- AKHIR INISIALISASI TTS ---
+
     if (prevButtonSVG) prevButtonSVG.addEventListener("click", prevCard);
     if (nextButtonSVG) nextButtonSVG.addEventListener("click", nextCard);
     if (shuffleButtonBebas)
-      shuffleButtonBebas.addEventListener("click", toggleShuffle);
+      shuffleButtonBebas.addEventListener("click", toggleShuffle); // <-- DIUBAH
 
     if (prevButtonTestSVG)
       prevButtonTestSVG.addEventListener("click", prevCard);
@@ -680,41 +794,28 @@ document.addEventListener("DOMContentLoaded", () => {
       correctButtonSVG.addEventListener("click", handleCorrect);
     if (wrongButtonSVG) wrongButtonSVG.addEventListener("click", handleWrong);
     if (shuffleButtonTest)
-      shuffleButtonTest.addEventListener("click", toggleShuffle);
-
-    if (ttsButton) {
-      if (typeof synth === "undefined") {
-        ttsButton.style.display = "none";
-      }
-
-      ttsButton.addEventListener("click", () => {
-        isTtsEnabled = !isTtsEnabled;
-        ttsButton.classList.toggle("active", isTtsEnabled);
-
-        if (isTtsEnabled && isFirstTtsClick && synth) {
-          console.log(
-            "TTS diaktifkan pertama kali, mencoba 'membangunkan' daftar suara..."
-          );
-          synth.getVoices();
-          isFirstTmsClick = false;
-        }
-
-        if (!isTtsEnabled && synth.speaking) {
-          synth.cancel();
-        }
-      });
-    }
+      shuffleButtonTest.addEventListener("click", toggleShuffle); // <-- DIUBAH
 
     loadProgress((progresDimuat) => {
       if (!progresDimuat) {
         currentFlashcards = [...originalFlashcards];
         totalCardCount = originalFlashcards.length;
-        if (learningMode === "test" || isShuffled) {
-          shuffleArray(currentFlashcards);
-        }
+
+        // DIUBAH: Selalu acak saat sesi baru dimulai, untuk mode bebas dan test
+        shuffleArray(currentFlashcards);
+        isShuffled = true;
+        // Tampilkan status aktif di tombol
+        if (shuffleButtonBebas) shuffleButtonBebas.classList.add("active");
+        if (shuffleButtonTest) shuffleButtonTest.classList.add("active");
       } else {
+        // Progres dimuat, ambil status acak dari progres
         const progress = JSON.parse(localStorage.getItem(storageKey) || "{}");
         totalCardCount = progress.totalCardCount || currentFlashcards.length;
+        isShuffled = progress.isShuffled || false; // Ambil status acak
+        if (shuffleButtonBebas)
+          shuffleButtonBebas.classList.toggle("active", isShuffled);
+        if (shuffleButtonTest)
+          shuffleButtonTest.classList.toggle("active", isShuffled);
       }
 
       if (!totalCardCount) {
