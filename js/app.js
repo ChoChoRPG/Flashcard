@@ -1,32 +1,20 @@
 document.addEventListener("DOMContentLoaded", () => {
   const urlParams = new URLSearchParams(window.location.search);
-  // Ambil parameter 'bab', bisa berisi "N5_1" atau "N5_1,N5_3,N4_1"
   const babIdsParam = urlParams.get("bab");
   const learningMode = urlParams.get("mode") || "bebas";
 
-  // Ubah parameter string menjadi array ID
   const babIds = babIdsParam ? babIdsParam.split(",").filter(Boolean) : [];
 
   if (!babIds || babIds.length === 0) {
     document.getElementById("card-front").textContent = "Bab tidak ditemukan.";
-    console.error("Parameter 'bab' tidak ada di URL.");
     return;
   }
 
-  // Buat key unik untuk localStorage berdasarkan bab yang dipilih & diurutkan
-  // Ini memastikan progres disimpan untuk "N5_1,N5_2" dan "N5_2,N5_1" di tempat yang sama
   const sortedBabKey = babIds.sort().join("_");
   const storageKey = `flashcardProgress_babs${sortedBabKey}_mode${learningMode}`;
 
-  /**
-   * --- LOGIKA LOADING BARU DENGAN FETCH ---
-   * Memuat satu file data menggunakan fetch dan mengekstrak dataString.
-   * @param {string} babId - ID Bab (misal "N5_1")
-   * @returns {Promise<string>} - Promise yang resolve dengan dataString dari file
-   */
   async function loadSingleDataScript(babId) {
     try {
-      // Path ../js/ adalah relatif dari /sesi/sesi.html
       const response = await fetch(`../js/Data${babId}.js`);
       if (!response.ok) {
         throw new Error(
@@ -35,84 +23,55 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       const scriptText = await response.text();
 
-      // Periksa apakah scriptText itu kosong
       if (!scriptText || scriptText.trim() === "") {
-        console.warn(`Data${babId}.js kosong.`);
-        return ""; // Kembalikan string kosong agar join tidak gagal
+        return "";
       }
 
-      // Trik untuk mengekstrak 'dataString' tanpa 'eval()' penuh
-      // Ini mengeksekusi "var dataString = '...';" dan mengembalikan 'dataString'
       const data = new Function(
         scriptText +
           '; return typeof dataString !== "undefined" ? dataString : undefined;'
       )();
 
       if (typeof data !== "undefined") {
-        console.log(`Data${babId}.js loaded and parsed successfully.`);
         return data;
       } else {
-        // Ini error jika file JS ada, tapi tidak mendefinisikan 'dataString'
         throw new Error(
           `dataString tidak terdefinisi di dalam Data${babId}.js`
         );
       }
     } catch (error) {
-      console.error(`Error di loadSingleDataScript untuk ${babId}:`, error);
-      // Lempar error lagi agar bisa ditangkap oleh Promise.all
       throw new Error(`Gagal memproses Data${babId}.js: ${error.message}`);
     }
   }
 
-  /**
-   * Memuat semua script data secara PARALEL (lebih cepat) menggunakan Fetch.
-   * @param {string[]} babIds - Array ID bab
-   * @param {function(string)} onCompleteCallback - Callback saat semua data digabung
-   * @param {function(Error)} onErrorCallback - Callback jika ada error
-   */
   async function loadAllDataScripts(
     babIds,
     onCompleteCallback,
     onErrorCallback
   ) {
     try {
-      // Buat array berisi SEMUA promise (fetch)
       const allPromises = babIds.map((babId) => loadSingleDataScript(babId));
-
-      // Tunggu SEMUA promise selesai secara paralel
-      // Ini jauh lebih cepat daripada loop sekuensial
       const allDataStrings = await Promise.all(allPromises);
-
-      // Gabungkan hasilnya (file yang kosong akan jadi string kosong, tidak masalah)
       onCompleteCallback(allDataStrings.join("\n"));
     } catch (error) {
-      // Jika SATU saja gagal, Promise.all akan reject
+      // <-- Kurung kurawal yang hilang sudah ditambahkan di sini
       onErrorCallback(error);
     }
   }
-  // --- AKHIR LOGIKA LOADING BARU ---
 
-  // Panggil loadAllDataScripts
   loadAllDataScripts(
     babIds,
     (combinedData) => {
-      // Semua data berhasil dimuat dan digabung
-      // Set dataString global yang akan digunakan oleh initializeApp
       window.dataString = combinedData;
-      initializeApp(); // Jalankan aplikasi
+      initializeApp();
     },
     (error) => {
-      // Terjadi error saat memuat salah satu file
       console.error(error);
       document.getElementById("card-front").textContent = error.message;
     }
   );
 
-  // --- Fungsi Inisialisasi Aplikasi Utama ---
-  // (Fungsi ini sekarang hanya akan dipanggil SETELAH semua data dimuat)
   function initializeApp() {
-    // dataString sekarang ada di window.dataString (di-set oleh callback loadAllDataScripts)
-    // Ini berisi data gabungan dari semua bab yang dipilih
     if (typeof dataString === "undefined" || dataString.trim() === "") {
       cardFront.textContent = "Data kosong atau tidak valid.";
       return;
@@ -142,22 +101,19 @@ document.addEventListener("DOMContentLoaded", () => {
     const modalButtonYes = document.getElementById("modal-button-yes");
     const modalButtonNo = document.getElementById("modal-button-no");
 
-    // Dapatkan elemen canvas konfeti
     const confettiCanvas = document.getElementById("confetti-canvas");
     const myConfetti = confettiCanvas
       ? confetti.create(confettiCanvas, { resize: true })
       : null;
 
-    // ================== VARIABEL TTS ==================
     let isTtsEnabled = false;
     const synth = window.speechSynthesis;
-    let isFirstTtsClick = true; // Untuk "membangunkan" suara di mobile
-    // ================== AKHIR VARIABEL TTS =================
+    let isFirstTtsClick = true;
 
     let originalFlashcards = [];
     let currentFlashcards = [];
     let wrongPile = [];
-    let wrongAnswerLog = {}; // <-- VARIABEL BARU UNTUK MELACAK FREKUENSI
+    let wrongAnswerLog = {};
     let currentCardIndex = 0;
     let sessionProgress = 1;
     let correctAnswers = 0;
@@ -165,16 +121,9 @@ document.addEventListener("DOMContentLoaded", () => {
     let isFlipped = false;
     let isShuffled = false;
 
-    // ================== FUNGSI TTS ==================
-    /**
-     * Membacakan teks yang diberikan menggunakan suara Jepang.
-     * @param {string} text - Teks yang akan dibacakan.
-     */
     function speak(text) {
       if (typeof synth === "undefined" || !synth || !text) {
         if (typeof synth === "undefined") {
-          console.error("Speech Synthesis API tidak didukung.");
-          // Nonaktifkan kedua tombol jika API tidak ada
           const ttsBtnBebas = document.getElementById("tts-button-bebas");
           const ttsBtnTest = document.getElementById("tts-button-test");
           if (ttsBtnBebas) ttsBtnBebas.style.display = "none";
@@ -184,32 +133,16 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       if (synth.speaking) {
-        synth.cancel(); // Hentikan jika sedang berbicara
+        synth.cancel();
       }
 
       const utterThis = new SpeechSynthesisUtterance(text);
-
-      utterThis.onend = () => {
-        // console.log("Speech finished.");
-      };
-
       utterThis.onerror = (e) => {
         console.error("SpeechSynthesisUtterance.onerror", e);
       };
 
-      // Ambil daftar suara SETIAP KALI fungsi speak dipanggil.
       const allVoices = synth.getVoices();
-
-      if (allVoices.length === 0) {
-        console.warn(
-          "Daftar suara (getVoices) masih kosong. TTS mungkin gagal atau salah logat."
-        );
-      }
-
-      // Cari suara Jepang (ja-JP)
       let japaneseVoice = allVoices.find((voice) => voice.lang === "ja-JP");
-
-      // Fallback jika tidak ada suara ja-JP spesifik, cari yang depannya "ja"
       if (!japaneseVoice) {
         japaneseVoice = allVoices.find((voice) => voice.lang.startsWith("ja"));
       }
@@ -217,20 +150,14 @@ document.addEventListener("DOMContentLoaded", () => {
       if (japaneseVoice) {
         utterThis.voice = japaneseVoice;
       } else {
-        // Jika tidak ada suara Jepang, setidaknya setel bahasa
         utterThis.lang = "ja-JP";
-        console.warn(
-          "Suara ja-JP tidak ditemukan. Menggunakan default browser (ini mungkin penyebab logat salah)."
-        );
       }
 
       utterThis.pitch = 1;
-      utterThis.rate = 0.8; // Kecepatan normal adalah 1, dibuat sedikit lebih lambat
+      utterThis.rate = 0.8;
       synth.speak(utterThis);
     }
-    // ================== AKHIR FUNGSI TTS =================
 
-    // Parsing data gabungan
     for (const line of dataString.trim().split("\n")) {
       if (line.trim() === "" || line.startsWith(";")) continue;
       try {
@@ -248,12 +175,11 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         const backHTML = `<div class="hiragana">${hiragana}</div><div class="definition">${definition}</div><div class="level">${level}</div>`;
 
-        // Simpan juga definisi mentah dan hiragana untuk TTS
         originalFlashcards.push({
           front,
           back: backHTML,
           hiragana: hiragana,
-          definition: definition, // <-- Simpan definisi mentah
+          definition: definition,
           answered: null,
         });
       } catch (e) {
@@ -301,10 +227,6 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    /**
-     * FUNGSI BARU: Menampilkan rekap sesi tes
-     * @param {object} log - Objek wrongAnswerLog
-     */
     function showTestRecap(log) {
       const appContainer = document.getElementById("app");
       const recapContainer = document.getElementById("recap-container");
@@ -313,38 +235,35 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const logEntries = Object.values(log);
 
-      // Jika tidak ada kesalahan, tampilkan modal sukses biasa dan redirect
       if (logEntries.length === 0) {
         showModal(
           "Sesi Tes Selesai! Anda Benar Semua.",
           () => {
             window.location.href = "../index.html";
           },
-          null // Tidak ada tombol "Tidak"
+          null
         );
         return;
       }
 
-      // 1. Sembunyikan UI utama
       if (appContainer) appContainer.style.display = "none";
       if (headerControls) headerControls.style.display = "none";
 
-      // 2. Siapkan data tabel
-      logEntries.sort((a, b) => b.count - a.count); // Urutkan berdasarkan frekuensi (terbanyak dulu)
-      recapTableBody.innerHTML = ""; // Kosongkan isi tabel sebelumnya
+      logEntries.sort((a, b) => b.count - a.count);
+      recapTableBody.innerHTML = "";
 
       logEntries.forEach((entry, index) => {
         const row = document.createElement("tr");
         row.innerHTML = `
           <td>${index + 1}</td>
-          <td>${entry.card.front}</td>
-          <td>${entry.card.definition}</td>
+          <td>${entry.card.front || "-"}</td>
+          <td>${entry.card.hiragana || "-"}</td>
+          <td>${entry.card.definition || "-"}</td>
           <td>${entry.count}</td>
         `;
         recapTableBody.appendChild(row);
       });
 
-      // 3. Tampilkan UI Rekap
       if (recapContainer) recapContainer.style.display = "block";
     }
 
@@ -358,9 +277,8 @@ document.addEventListener("DOMContentLoaded", () => {
           correctAnswers: correctAnswers,
           totalCardCount: totalCardCount,
           isShuffled: isShuffled,
-          wrongAnswerLog: wrongAnswerLog, // <-- SIMPAN LOG
+          wrongAnswerLog: wrongAnswerLog,
         };
-        // Gunakan storageKey unik yang sudah dibuat
         localStorage.setItem(storageKey, JSON.stringify(progress));
       } catch (e) {
         console.error("Gagal menyimpan progres ke localStorage:", e);
@@ -369,7 +287,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function clearProgress() {
       localStorage.removeItem(storageKey);
-      wrongAnswerLog = {}; // <-- RESET LOG SAAT PROGRES DIHAPUS
+      wrongAnswerLog = {};
     }
 
     function loadProgress(onProgressLoaded) {
@@ -378,7 +296,25 @@ document.addEventListener("DOMContentLoaded", () => {
         showModal(
           "Ditemukan sesi terakhir yang belum selesai. Lanjutkan?",
           () => {
-            const progress = JSON.parse(savedData);
+            let progress;
+            try {
+              progress = JSON.parse(savedData);
+            } catch (e) {
+              clearProgress();
+              onProgressLoaded(false);
+              return;
+            }
+
+            if (
+              !progress ||
+              !progress.currentFlashcards ||
+              progress.currentFlashcards.length === 0
+            ) {
+              clearProgress();
+              onProgressLoaded(false);
+              return;
+            }
+
             currentFlashcards = progress.currentFlashcards;
             wrongPile = progress.wrongPile;
             currentCardIndex = progress.currentCardIndex;
@@ -387,7 +323,7 @@ document.addEventListener("DOMContentLoaded", () => {
             totalCardCount =
               progress.totalCardCount || originalFlashcards.length;
             isShuffled = progress.isShuffled;
-            wrongAnswerLog = progress.wrongAnswerLog || {}; // <-- LOAD LOG
+            wrongAnswerLog = progress.wrongAnswerLog || {};
             if (shuffleButtonBebas)
               shuffleButtonBebas.classList.toggle("active", isShuffled);
             if (shuffleButtonTest)
@@ -395,7 +331,7 @@ document.addEventListener("DOMContentLoaded", () => {
             onProgressLoaded(true);
           },
           () => {
-            clearProgress(); // Ini akan me-reset wrongAnswerLog juga
+            clearProgress();
             onProgressLoaded(false);
           }
         );
@@ -434,41 +370,26 @@ document.addEventListener("DOMContentLoaded", () => {
       updateCounter();
     }
 
-    /**
-     * DIUBAH TOTAL: Fungsi ini sekarang menjadi toggle ON/OFF
-     * Saat ON: Mengacak sisa kartu
-     * Saat OFF: Mengurutkan sisa kartu
-     */
     function toggleShuffle() {
-      isShuffled = !isShuffled; // Toggle status
+      isShuffled = !isShuffled;
 
-      // Update UI tombol
       if (shuffleButtonBebas)
         shuffleButtonBebas.classList.toggle("active", isShuffled);
       if (shuffleButtonTest)
         shuffleButtonTest.classList.toggle("active", isShuffled);
 
-      // Ambil kartu yang sudah dilihat (termasuk yang sekarang)
       const seenCards = currentFlashcards.slice(0, currentCardIndex + 1);
-
-      // Ambil kartu yang tersisa
       let remainingCards = currentFlashcards.slice(currentCardIndex + 1);
 
-      // Jika sisa kartu kurang dari 2, tidak ada yang perlu diacak/diurutkan
       if (remainingCards.length < 2) {
-        saveProgress(); // Cukup simpan status isShuffled yang baru
+        saveProgress();
         return;
       }
 
       if (isShuffled) {
-        // --- PENGGUNA BARU MENYALAKAN ACAN ---
-        // Acak HANYA kartu yang tersisa
         shuffleArray(remainingCards);
-
-        // Gabungkan kembali array: kartu lama + sisa kartu yang sudah teracak
         currentFlashcards = seenCards.concat(remainingCards);
 
-        // Beri umpan balik visual
         if (cardScene) {
           cardScene.style.transform = "scale(1.05)";
           setTimeout(() => {
@@ -476,30 +397,21 @@ document.addEventListener("DOMContentLoaded", () => {
           }, 150);
         }
       } else {
-        // --- PENGGUNA BARU MEMATIKAN ACAN ---
-        // Kita perlu mengurutkan 'remainingCards' kembali ke urutan aslinya.
-
-        // 1. Buat Peta (Map) untuk urutan asli agar pencarian cepat
-        //    Kita hanya perlu melakukan ini sekali jika belum ada
         if (!window.originalOrderMap) {
           window.originalOrderMap = new Map();
           originalFlashcards.forEach((card, index) => {
-            // Gunakan 'front' (Kanji) sebagai ID unik
             window.originalOrderMap.set(card.front, index);
           });
         }
 
-        // 2. Urutkan 'remainingCards' berdasarkan posisi aslinya di 'originalOrderMap'
         remainingCards.sort((a, b) => {
           const orderA = window.originalOrderMap.get(a.front);
           const orderB = window.originalOrderMap.get(b.front);
           return orderA - orderB;
         });
 
-        // 3. Gabungkan kembali array
         currentFlashcards = seenCards.concat(remainingCards);
 
-        // Beri umpan balik visual
         if (cardScene) {
           cardScene.style.transform = "scale(0.95)";
           setTimeout(() => {
@@ -507,8 +419,6 @@ document.addEventListener("DOMContentLoaded", () => {
           }, 150);
         }
       }
-
-      // Simpan status baru dan urutan kartu yang baru
       saveProgress();
     }
 
@@ -605,9 +515,11 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function checkTestRound() {
-      if (currentCardIndex + 1 >= currentFlashcards.length) {
-        if (wrongPile.length > 0) {
-          setTimeout(() => {
+      if (currentCardIndex >= currentFlashcards.length - 1) {
+        const finalLog = JSON.parse(JSON.stringify(wrongAnswerLog));
+
+        setTimeout(() => {
+          if (wrongPile.length > 0) {
             showModal(
               `Putaran selesai. Anda masih salah ${wrongPile.length} kartu. Mulai putaran baru dengan kartu yang salah?`,
               () => {
@@ -617,29 +529,22 @@ document.addEventListener("DOMContentLoaded", () => {
                 correctAnswers = 0;
                 totalCardCount = currentFlashcards.length;
                 currentFlashcards.forEach((c) => (c.answered = null));
-                // Acak kartu yang salah untuk putaran baru jika mode acak masih aktif
                 if (isShuffled) shuffleArray(currentFlashcards);
                 saveProgress();
                 transitionToCard(0);
               },
               () => {
                 clearProgress();
-                window.location.href = "../index.html";
+                showTestRecap(finalLog);
               }
             );
-          }, 500);
-        } else {
-          // --- INI BAGIAN YANG DIPERBARUI ---
-          triggerConfetti();
-          const finalLog = { ...wrongAnswerLog }; // Salin log sebelum di-reset
-          clearProgress(); // Hapus progres dari storage
-
-          setTimeout(() => {
-            // Panggil fungsi rekap baru
+          } else {
+            triggerConfetti();
+            clearProgress();
             showTestRecap(finalLog);
-          }, 500);
-          // --- AKHIR BAGIAN YANG DIPERBARUI ---
-        }
+          }
+        }, 500);
+
         return true;
       }
       return false;
@@ -664,25 +569,23 @@ document.addEventListener("DOMContentLoaded", () => {
       updateCounter();
       saveProgress();
 
-      transitionToCard(currentCardIndex + 1);
+      const isRoundOver = checkTestRound();
 
-      setTimeout(() => {
-        checkTestRound();
-      }, 400);
+      if (!isRoundOver) {
+        transitionToCard(currentCardIndex + 1);
+      }
     }
 
     function handleWrong() {
       if (learningMode !== "test" || currentFlashcards.length === 0) return;
       const cardData = currentFlashcards[currentCardIndex];
 
-      // --- LOGIKA PELACAKAN FREKUENSI BARU ---
-      const cardId = cardData.front; // Gunakan kanji sebagai ID unik
+      const cardId = cardData.front;
       const currentCount = wrongAnswerLog[cardId]?.count || 0;
       wrongAnswerLog[cardId] = {
         count: currentCount + 1,
-        card: { ...cardData }, // Simpan salinan data kartu (termasuk definisi)
+        card: { ...cardData },
       };
-      // --- AKHIR LOGIKA PELACAKAN ---
 
       if (cardData.answered === "correct") {
         correctAnswers--;
@@ -694,13 +597,25 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       updateCounter();
-      saveProgress(); // Simpan progres (termasuk wrongAnswerLog)
+      saveProgress();
 
-      transitionToCard(currentCardIndex + 1);
+      const isRoundOver = checkTestRound();
 
-      setTimeout(() => {
-        checkTestRound();
-      }, 400);
+      if (!isRoundOver) {
+        transitionToCard(currentCardIndex + 1);
+      }
+    }
+
+    function handleBypass() {
+      if (learningMode === "bebas") {
+        nextCard();
+      } else if (learningMode === "test") {
+        const isRoundOver = checkTestRound();
+
+        if (!isRoundOver) {
+          transitionToCard(currentCardIndex + 1);
+        }
+      }
     }
 
     function handleThemeToggle() {
@@ -708,10 +623,6 @@ document.addEventListener("DOMContentLoaded", () => {
       localStorage.setItem("theme", isDarkMode ? "dark" : "light");
     }
 
-    /**
-     * FUNGSI BARU: Menginisialisasi tombol TTS
-     * @param {HTMLElement} buttonElement - Elemen tombol (bisa bebas atau test)
-     */
     function initializeTtsButton(buttonElement) {
       if (!buttonElement) return;
 
@@ -720,16 +631,12 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      // Sinkronkan tampilan tombol dengan status global saat di-load
       buttonElement.classList.toggle("active", isTtsEnabled);
 
       buttonElement.addEventListener("click", () => {
-        isTtsEnabled = !isTtsEnabled; // Toggle status global
-
-        // Update tampilan tombol INI
+        isTtsEnabled = !isTtsEnabled;
         buttonElement.classList.toggle("active", isTtsEnabled);
 
-        // Update juga tombol pasangannya agar sinkron
         const otherButtonId =
           buttonElement.id === "tts-button-bebas"
             ? "tts-button-test"
@@ -740,9 +647,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         if (isTtsEnabled && isFirstTtsClick && synth) {
-          console.log(
-            "TTS diaktifkan pertama kali, mencoba 'membangunkan' daftar suara..."
-          );
           synth.getVoices();
           isFirstTtsClick = false;
         }
@@ -754,8 +658,11 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     document.addEventListener("keydown", (e) => {
-      if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key))
+      if (
+        ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "="].includes(e.key)
+      )
         e.preventDefault();
+
       switch (e.key) {
         case "ArrowUp":
         case "ArrowDown":
@@ -767,26 +674,24 @@ document.addEventListener("DOMContentLoaded", () => {
         case "ArrowLeft":
           prevCard();
           break;
+        case "=":
+          handleBypass();
+          break;
       }
     });
 
     if (card) card.addEventListener("click", flipCard);
-
     if (themeToggle) themeToggle.addEventListener("click", handleThemeToggle);
 
-    // --- INISIALISASI TTS BARU ---
-    // Temukan kedua tombol
     const ttsButtonBebas = document.getElementById("tts-button-bebas");
     const ttsButtonTest = document.getElementById("tts-button-test");
-    // Inisialisasi listener untuk keduanya
     initializeTtsButton(ttsButtonBebas);
     initializeTtsButton(ttsButtonTest);
-    // --- AKHIR INISIALISASI TTS ---
 
     if (prevButtonSVG) prevButtonSVG.addEventListener("click", prevCard);
     if (nextButtonSVG) nextButtonSVG.addEventListener("click", nextCard);
     if (shuffleButtonBebas)
-      shuffleButtonBebas.addEventListener("click", toggleShuffle); // <-- DIUBAH
+      shuffleButtonBebas.addEventListener("click", toggleShuffle);
 
     if (prevButtonTestSVG)
       prevButtonTestSVG.addEventListener("click", prevCard);
@@ -794,24 +699,21 @@ document.addEventListener("DOMContentLoaded", () => {
       correctButtonSVG.addEventListener("click", handleCorrect);
     if (wrongButtonSVG) wrongButtonSVG.addEventListener("click", handleWrong);
     if (shuffleButtonTest)
-      shuffleButtonTest.addEventListener("click", toggleShuffle); // <-- DIUBAH
+      shuffleButtonTest.addEventListener("click", toggleShuffle);
 
     loadProgress((progresDimuat) => {
       if (!progresDimuat) {
         currentFlashcards = [...originalFlashcards];
         totalCardCount = originalFlashcards.length;
 
-        // DIUBAH: Selalu acak saat sesi baru dimulai, untuk mode bebas dan test
         shuffleArray(currentFlashcards);
         isShuffled = true;
-        // Tampilkan status aktif di tombol
         if (shuffleButtonBebas) shuffleButtonBebas.classList.add("active");
         if (shuffleButtonTest) shuffleButtonTest.classList.add("active");
       } else {
-        // Progres dimuat, ambil status acak dari progres
         const progress = JSON.parse(localStorage.getItem(storageKey) || "{}");
         totalCardCount = progress.totalCardCount || currentFlashcards.length;
-        isShuffled = progress.isShuffled || false; // Ambil status acak
+        isShuffled = progress.isShuffled || false;
         if (shuffleButtonBebas)
           shuffleButtonBebas.classList.toggle("active", isShuffled);
         if (shuffleButtonTest)

@@ -665,6 +665,23 @@ body.dark-mode .contact-fab svg {
 body.dark-mode .contact-fab:hover svg {
     stroke: var(--text-dark);
 }
+/* ATURAN BARU UNTUK IKON IMG */
+.contact-fab img {
+    width: 24px;
+    height: 24px;
+    transition: filter 0.3s ease;
+    filter: invert(0.5);
+}
+.contact-fab:hover img {
+    filter: invert(0.3);
+}
+body.dark-mode .contact-fab img {
+    filter: invert(0.8);
+}
+body.dark-mode .contact-fab:hover img {
+    filter: invert(1);
+}
+/* AKHIR ATURAN BARU */
 .contact-menu {
     position: absolute;
     top: 60px;
@@ -778,6 +795,12 @@ body.dark-mode .contact-icons img {
         width: 20px;
         height: 20px;
     }
+    /* ATURAN BARU UNTUK IKON IMG */
+    .contact-fab img {
+        width: 20px;
+        height: 20px;
+    }
+    /* AKHIR ATURAN BARU */
     .contact-menu {
         top: 50px;
         width: calc(100vw - 40px);
@@ -802,3 +825,4 @@ body.dark-mode .contact-icons img {
     }
 }
 
+    
